@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BotsShink</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="custom-titlebar">
+    <div class="titlebar-left">
+      <div class="titlebar-name-wrap">
+        <strong class="titlebar-name">BotsShink</strong>
+      </div>
+    </div>
+    <div class="titlebar-controls">
+      <button id="windowMinBtn" class="window-control window-min" type="button" aria-label="Свернуть">─</button>
+      <button id="windowMaxBtn" class="window-control window-max" type="button" aria-label="Развернуть">□</button>
+      <button id="windowCloseBtn" class="window-control window-close" type="button" aria-label="Закрыть">✕</button>
+    </div>
+  </header>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand brand-text-only">
+        <div>
+          <h1>BotsShink</h1>
+          <p>Minecraft Bot Panel</p>
+        </div>
+      </div>
+
+      <div class="sidebar-tools">
+        <button id="sidebarToggleBtn" class="sidebar-toggle" type="button" aria-label="Скрыть боковую панель" title="Скрыть боковую панель">
+          <span class="sidebar-toggle-icon" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <nav class="tabs" aria-label="Разделы">
+        <button class="tab-button active" data-tab="home">Главная</button>
+        <button class="tab-button" data-tab="bots">Боты</button>
+        <button class="tab-button" data-tab="scripts">Скрипты</button>
+      </nav>
+
+      <div class="sidebar-card">
+        <span class="muted">Сервер</span>
+        <strong id="sidebarServer">не выбран</strong>
+      </div>
+      <div class="sidebar-card">
+        <span class="muted">Активных</span>
+        <strong id="sidebarActive">0 / 0</strong>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div id="updateBanner" class="update-banner hidden">
+        <div class="update-copy">
+          <strong id="updateTitle">Проверка обновлений</strong>
+          <p id="updateText">Проверяем GitHub Releases...</p>
+        </div>
+        <div class="update-actions">
+          <button id="updateOpenBtn" class="secondary-button" type="button">Открыть GitHub</button>
+          <button id="updateCloseBtn" class="ghost-button" type="button">Позже</button>
+        </div>
+      </div>
+
+      <section id="home" class="tab-panel active">
+        <header class="page-header">
+          <div>
+            <h2>Главная</h2>
+            <p>Общий запуск, сервер, статусы и быстрый обзор.</p>
+          </div>
+          <div class="header-actions">
+            <button id="startBtn" class="primary-button">Запуск</button>
+            <button id="stopBtn" class="danger-button">Стоп</button>
+          </div>
+        </header>
+
+        <div class="grid two">
+          <section class="card">
+            <h3>Настройки сервера</h3>
+            <div class="form-grid">
+              <label>
+                <span>IP сервера</span>
+                <input id="hostInput" type="text" value="127.0.0.1" placeholder="например 176.114.72.37" />
+              </label>
+              <label>
+                <span>Порт</span>
+                <input id="portInput" type="number" value="25565" min="1" max="65535" />
+              </label>
+              <label>
+                <span>Версия</span>
+                <input id="versionInput" type="text" value="auto" placeholder="auto или 1.20.1" />
+              </label>
+              <label>
+                <span>Задержка между входами, сек</span>
+                <input id="delayInput" type="number" value="15" min="5" max="600" />
+              </label>
+            </div>
+          </section>
+
+          <section class="card">
+            <h3>Быстрый статус</h3>
+            <div class="stats-row">
+              <div class="stat-box"><span>Онлайн</span><strong id="onlineCount">0</strong></div>
+              <div class="stat-box"><span>Всего</span><strong id="totalCount">0</strong></div>
+              <div class="stat-box"><span>Скриптов</span><strong id="scriptCount">0</strong></div>
+            </div>
+            <button id="checkUpdateBtn" class="secondary-button full" type="button">Проверить обновления</button>
+          </section>
+        </div>
+
+        <section class="card">
+          <div class="section-title-row">
+            <h3>Статус ботов</h3>
+                      </div>
+          <div id="homeStatusList" class="status-list empty">Пока нет запущенных ботов.</div>
+        </section>
+
+        <section class="card log-card">
+          <div class="section-title-row">
+            <h3>Логи</h3>
+            <button id="clearLogBtn" class="ghost-button">Очистить</button>
+          </div>
+          <pre id="logOutput"></pre>
+        </section>
+      </section>
+
+      <section id="bots" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h2>Боты</h2>
+            <p>Создание ботов и назначение скриптов отдельно каждому боту.</p>
+          </div>
+          <div class="header-actions">
+            <button id="startBtn2" class="primary-button">Запуск</button>
+            <button id="stopBtn2" class="danger-button">Стоп</button>
+          </div>
+        </header>
+
+        <section class="card">
+          <div class="section-title-row">
+            <h3>Создание ботов</h3>
+            <span class="hint">Ник: 3–16 символов, английские буквы, цифры или _</span>
+          </div>
+          <div id="botRows" class="bot-rows"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-title-row">
+            <h3>Скрипты по ботам</h3>
+            <span class="hint">✦ включить · ━ выключить</span>
+          </div>
+          <div id="botCards" class="bot-cards"></div>
+        </section>
+      </section>
+
+      <section id="scripts" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h2>Скрипты</h2>
+            <p>Все скрипты из папки BotSkripts. Автообновление включено.</p>
+          </div>
+          <button id="openScriptsBtn" class="primary-button">Загрузить</button>
+        </header>
+
+        <section class="card">
+          <h3>Формат скрипта</h3>
+          <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Русское название</span><br><span>// BotSkripts-Config: targetPlayer</span></div>
+          <p class="hint">Первая строка обязательна. Вторая даёт русское название. Третья включает выбор игрока рядом со скриптом.</p>
+        </section>
+
+        <section class="card">
+          <div class="section-title-row">
+            <h3>Найденные скрипты</h3>
+            <button id="refreshScriptsBtn" class="secondary-button">Обновить список</button>
+          </div>
+          <div id="scriptList" class="script-list empty">Скрипты не найдены.</div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>

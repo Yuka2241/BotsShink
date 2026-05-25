@@ -1,0 +1,5 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+call npm install --no-audit --no-fund
+call npm start

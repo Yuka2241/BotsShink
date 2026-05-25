@@ -1,0 +1,112 @@
+{
+  "name": "botsshink",
+  "version": "1.24.0",
+  "description": "BotsShink custom UI panel and installer for Mineflayer bots on allowed Minecraft servers.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable --x64 --publish never",
+    "build:installer": "electron-builder --win nsis --x64 --publish never",
+    "build:all": "electron-builder --win portable nsis --x64 --publish never",
+    "build:portable": "electron-builder --win portable --x64 --publish never",
+    "dist:unpacked": "electron-builder --win dir --x64 --publish never"
+  },
+  "dependencies": {
+    "mineflayer": "^4.28.1",
+    "mineflayer-pathfinder": "^2.4.5",
+    "minecraft-data": "^3.83.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^25.1.8",
+    "electron": "^33.2.1"
+  },
+  "license": "MIT",
+  "productName": "BotsShink",
+  "build": {
+    "appId": "com.botsshink.panel",
+    "productName": "BotsShink",
+    "copyright": "Copyright © 2026 BotsShink",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "asar": false,
+    "files": [
+      "**/*",
+      "!dist/**/*",
+      "!node_modules/.cache/**/*",
+      "!*.zip",
+      "!build/*.psd"
+    ],
+    "extraResources": [
+      {
+        "from": "BotSkripts",
+        "to": "BotSkripts",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "logo",
+        "to": "logo",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "BotsShink-Portable-${version}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "BotsShink-Setup-${version}.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BotsShink",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/uninstallerSidebar.bmp",
+      "installerHeader": "build/installerHeader.bmp",
+      "displayLanguageSelector": false,
+      "runAfterFinish": true,
+      "menuCategory": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Yuka2241",
+        "repo": "BotsShink",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "author": "BotsShink",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yuka2241/BotsShink.git"
+  }
+}
