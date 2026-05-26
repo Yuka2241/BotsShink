@@ -19,8 +19,8 @@ How it works:
 4. If no releases exist yet, manual check will show that GitHub Release has not been created yet.
 
 To make update check show an update:
-1. Build version 1.24.0.
+1. Build version 1.35.0.
 2. Upload current project to GitHub repo Yuka2241/BotsShink.
-3. Create GitHub Release with tag v1.29.0 or higher.
+3. Create GitHub Release with tag v1.35.0 or higher.
 4. Add installer files to that release.
-5. Open app version 1.24.0 and press "Проверить обновления".
+5. Open app version 1.35.0 and press "Проверить обновления".

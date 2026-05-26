@@ -18,8 +18,8 @@ echo Files in dist:
 dir dist /b
 
 echo.
-if exist "dist\BotsShink-Setup-1.24.0.exe" echo FOUND installer: dist\BotsShink-Setup-1.24.0.exe
-if exist "dist\BotsShink-Portable-1.24.0.exe" echo FOUND portable: dist\BotsShink-Portable-1.24.0.exe
+if exist "dist\BotsShink-Setup-1.35.0.exe" echo FOUND installer: dist\BotsShink-Setup-1.35.0.exe
+if exist "dist\BotsShink-Portable-1.35.0.exe" echo FOUND portable: dist\BotsShink-Portable-1.35.0.exe
 if exist "dist\win-unpacked\BotsShink.exe" echo FOUND unpacked: dist\win-unpacked\BotsShink.exe
 
 echo.

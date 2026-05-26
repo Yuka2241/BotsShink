@@ -4,6 +4,9 @@ cd /d "%~dp0"
 set CSC_IDENTITY_AUTO_DISCOVERY=false
 set ELECTRON_BUILDER_CACHE=%LOCALAPPDATA%\electron-builder\Cache
 
+set APP_VERSION=1.35.0
+set RELEASE_TAG=v1.35.0
+
 echo ========================================
 echo   BotsShink GitHub Web Installer Build
 echo ========================================
@@ -12,13 +15,13 @@ echo GitHub repo:
 echo https://github.com/Yuka2241/BotsShink
 echo.
 echo This builds a small web installer:
-echo dist\BotsShink-Web-Setup-1.27.0.exe
+echo BotsShink-Web-Setup-%APP_VERSION%.exe
 echo.
-echo IMPORTANT:
-echo After build, upload these files to GitHub Release tag v1.27.0:
-echo   1) dist\BotsShink-Web-Setup-1.27.0.exe
-echo   2) dist\botsshink-1.27.0-x64.nsis.7z
-echo   3) dist\latest.yml
+echo Upload to GitHub Release tag %RELEASE_TAG%:
+echo   1) BotsShink-Web-Setup-%APP_VERSION%.exe
+echo   2) botsshink-%APP_VERSION%-x64.nsis.7z
+echo   3) latest.yml
+echo.
 
 echo Node version:
 node -v
@@ -42,10 +45,15 @@ echo.
 echo ========================================
 echo BUILD FINISHED
 echo ========================================
-echo Upload these files to GitHub Releases tag v1.27.0:
+echo Look for release files in:
+echo   dist
+echo   dist\nsis-web
 echo.
-if exist "dist\BotsShink-Web-Setup-1.27.0.exe" echo OK: dist\BotsShink-Web-Setup-1.27.0.exe
-if exist "dist\botsshink-1.27.0-x64.nsis.7z" echo OK: dist\botsshink-1.27.0-x64.nsis.7z
+if exist "dist\nsis-web\BotsShink-Web-Setup-%APP_VERSION%.exe" echo OK: dist\nsis-web\BotsShink-Web-Setup-%APP_VERSION%.exe
+if exist "dist\nsis-web\botsshink-%APP_VERSION%-x64.nsis.7z" echo OK: dist\nsis-web\botsshink-%APP_VERSION%-x64.nsis.7z
+if exist "dist\nsis-web\latest.yml" echo OK: dist\nsis-web\latest.yml
+if exist "dist\BotsShink-Web-Setup-%APP_VERSION%.exe" echo OK: dist\BotsShink-Web-Setup-%APP_VERSION%.exe
+if exist "dist\botsshink-%APP_VERSION%-x64.nsis.7z" echo OK: dist\botsshink-%APP_VERSION%-x64.nsis.7z
 if exist "dist\latest.yml" echo OK: dist\latest.yml
 echo.
 explorer "%CD%\dist"

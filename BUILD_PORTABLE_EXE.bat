@@ -12,7 +12,7 @@ echo ========================================
 echo      BotsShink Portable EXE Build
 echo ========================================
 echo.
-echo This builds: dist\BotsShink-Portable-1.24.0.exe
+echo This builds: dist\BotsShink-Portable-1.35.0.exe
 echo.
 
 echo Node version:
@@ -39,8 +39,8 @@ if errorlevel 1 (
 )
 
 echo.
-if exist "dist\BotsShink-Portable-1.24.0.exe" (
-  echo DONE: dist\BotsShink-Portable-1.24.0.exe
+if exist "dist\BotsShink-Portable-1.35.0.exe" (
+  echo DONE: dist\BotsShink-Portable-1.35.0.exe
 ) else (
   echo Build ended, but expected file was not found. Check dist folder.
 )
