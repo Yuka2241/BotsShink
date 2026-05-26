@@ -45,6 +45,9 @@ const scripts = new Map();
 const bots = new Map();
 
 let currentServerLabel = 'сервер не выбран';
+let launchRunId = 0;
+let launchInProgress = false;
+let launchCancelRequested = false;
 
 const TELEGRAM_FEATURE_LABELS = {
   botNotifications: 'Уведомления о боте',
@@ -68,6 +71,10 @@ const telegramState = {
     serverOnline: false,
     playersOnline: false
   }
+};
+
+const consoleState = {
+  scriptEnabled: false
 };
 
 
@@ -893,6 +900,7 @@ function stopAfk(record) {
 function stopBot(username) {
   const record = bots.get(username);
   if (!record) return;
+  record.stoppedByUser = true;
 
   for (const fileName of [...record.activeScripts.keys()]) {
     stopScript(record, fileName);
@@ -911,7 +919,8 @@ function stopBot(username) {
   setBotStatus(username, 'offline');
 }
 
-async function connectBot(config, botConfig, scriptAssignments) {
+async function connectBot(config, botConfig, scriptAssignments, runId = launchRunId) {
+  if (launchCancelRequested || runId !== launchRunId) return;
   const username = cleanText(botConfig.nick);
   if (!isValidNick(username)) throw new Error(`Ник "${username}" неверный. Нужно 3-16 символов: английские буквы, цифры или _. Точки и пробелы нельзя.`);
 
@@ -929,7 +938,9 @@ async function connectBot(config, botConfig, scriptAssignments) {
     afkTimer: null,
     afkYaw: 0,
     activeScripts: new Map(),
-    desiredScripts: new Map(Object.entries(scriptAssignments || {}))
+    desiredScripts: new Map(Object.entries(scriptAssignments || {})),
+    launchRunId: runId,
+    stoppedByUser: false
   };
   bots.set(username, record);
   sendBotStatuses();
@@ -947,6 +958,10 @@ async function connectBot(config, botConfig, scriptAssignments) {
   record.bot = bot;
 
   bot.once('login', () => {
+    if (launchCancelRequested || record.stoppedByUser || record.launchRunId !== launchRunId) {
+      try { bot.quit('Launch cancelled'); } catch (_) {}
+      return;
+    }
     log(`${username}: вошёл на сервер.`);
     telegramNotifyBot(`${username}: вошёл на сервер ${currentServerLabel}`);
   });
@@ -956,6 +971,10 @@ async function connectBot(config, botConfig, scriptAssignments) {
   });
 
   bot.once('spawn', async () => {
+    if (launchCancelRequested || record.stoppedByUser || record.launchRunId !== launchRunId) {
+      try { bot.quit('Launch cancelled'); } catch (_) {}
+      return;
+    }
     setBotStatus(username, 'online');
     log(`${username}: появился в мире.`);
     if (record.afkEnabled) startAfk(record);
@@ -993,6 +1012,61 @@ async function connectBot(config, botConfig, scriptAssignments) {
     if (record.status !== 'kicked' && record.status !== 'error') setBotStatus(username, 'offline');
     log(`${username}: соединение закрыто.`);
   });
+}
+
+
+function parseConsoleCommand(input) {
+  const text = cleanText(input);
+  const match = text.match(/^say\s+"([^"]+)"\s+"([\s\S]*)"\s*$/i);
+  if (match) {
+    return { command: 'say', username: match[1].trim(), message: match[2] };
+  }
+
+  const allMatch = text.match(/^say\s+all\s+"([\s\S]*)"\s*$/i);
+  if (allMatch) {
+    return { command: 'say', username: 'all', message: allMatch[1] };
+  }
+
+  return { command: '', error: 'Формат команды: say "ник" "сообщение" или say all "сообщение"' };
+}
+
+async function runConsoleCommand(input) {
+  if (!consoleState.scriptEnabled) throw new Error('Скрипт Консоль выключен. Включи его во вкладке Скрипты.');
+
+  const parsed = parseConsoleCommand(input);
+  if (parsed.error) throw new Error(parsed.error);
+
+  if (parsed.command === 'say') {
+    const message = String(parsed.message || '').trim();
+    if (!message) throw new Error('Сообщение пустое.');
+
+    if (parsed.username.toLowerCase() === 'all') {
+      const onlineBots = [...bots.values()].filter((record) => record.bot && record.status === 'online');
+      if (!onlineBots.length) throw new Error('Нет онлайн-ботов для отправки сообщения.');
+      for (const record of onlineBots) {
+        record.bot.chat(message);
+      }
+      const text = `Консоль: сообщение отправлено всем онлайн-ботам (${onlineBots.length}).`;
+      log(text);
+      return { ok: true, message: text };
+    }
+
+    const record = bots.get(parsed.username);
+    if (!record || !record.bot || record.status !== 'online') {
+      throw new Error(`Бот "${parsed.username}" не найден или не онлайн.`);
+    }
+
+    record.bot.chat(message);
+    const text = `Консоль: ${parsed.username} отправил сообщение в чат.`;
+    log(text);
+    return { ok: true, message: text };
+  }
+
+  throw new Error('Неизвестная команда.');
+}
+
+function consoleStatusPayload() {
+  return { scriptEnabled: !!consoleState.scriptEnabled };
 }
 
 function sendKnownPlayers() {
@@ -1057,6 +1131,15 @@ ipcMain.handle('open-logo-folder', async () => {
 });
 
 ipcMain.handle('start-bots', async (_event, payload) => {
+  if (launchInProgress) {
+    uiError('Запуск уже идёт. Сначала дождись окончания или нажми Стоп.');
+    return { ok: false, message: 'Запуск уже идёт.' };
+  }
+
+  const runId = ++launchRunId;
+  launchInProgress = true;
+  launchCancelRequested = false;
+
   try {
     const config = normalizeServerConfig(payload.server || {});
     currentServerLabel = `${config.host}:${config.port}`;
@@ -1079,27 +1162,48 @@ ipcMain.handle('start-bots', async (_event, payload) => {
 
     log(`Запуск ${nickRows.length} бот(ов) на ${config.host}:${config.port}...`);
 
+    let started = 0;
     for (let i = 0; i < nickRows.length; i++) {
+      if (launchCancelRequested || runId !== launchRunId) {
+        log('Очередь запуска отменена. Новые боты больше не подключаются.');
+        break;
+      }
+
       const row = nickRows[i];
       const botAssignments = assignments[row.nick] || {};
-      await connectBot(config, row, botAssignments);
+      await connectBot(config, row, botAssignments, runId);
+      started += 1;
+
       if (i < nickRows.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, config.delaySeconds * 1000));
       }
     }
 
-    return { ok: true, message: `Запущено подключение: ${nickRows.length} бот(ов).` };
+    const cancelled = launchCancelRequested || runId !== launchRunId;
+    return {
+      ok: true,
+      message: cancelled ? `Запуск остановлен. Начато подключение: ${started} бот(ов).` : `Запущено подключение: ${started} бот(ов).`
+    };
   } catch (err) {
     uiError(err.message || String(err));
     return { ok: false, message: err.message || String(err) };
+  } finally {
+    if (runId === launchRunId) {
+      launchInProgress = false;
+      launchCancelRequested = false;
+    }
   }
 });
 
 ipcMain.handle('stop-bots', () => {
+  launchCancelRequested = true;
+  launchRunId += 1;
+  launchInProgress = false;
+
   const usernames = [...bots.keys()];
   if (!usernames.length) {
-    uiError('Боты не запущены.');
-    return { ok: false, message: 'Боты не запущены.' };
+    log('Очередь запуска отменена. Боты не запущены.');
+    return { ok: true, message: 'Очередь запуска отменена. Боты не запущены.' };
   }
 
   log(`Остановка ${usernames.length} бот(ов)...`);
@@ -1141,12 +1245,34 @@ ipcMain.handle('set-bot-script', async (_event, { username, fileName, enabled, o
 
 
 ipcMain.handle('set-global-script', (_event, { scriptName, enabled }) => {
-  if (scriptName !== 'telegram-app') return { ok: false, message: 'Неизвестный общий скрипт.' };
-  telegramState.scriptEnabled = !!enabled;
-  if (!telegramState.scriptEnabled && telegramState.running) stopTelegram();
-  sendTelegramStatus();
-  log(`Общий скрипт ТГ-приложение ${telegramState.scriptEnabled ? 'включён' : 'выключен'}.`);
-  return { ok: true, status: telegramStatusPayload() };
+  if (scriptName === 'telegram-app') {
+    telegramState.scriptEnabled = !!enabled;
+    if (!telegramState.scriptEnabled && telegramState.running) stopTelegram();
+    sendTelegramStatus();
+    log(`Общий скрипт ТГ-приложение ${telegramState.scriptEnabled ? 'включён' : 'выключен'}.`);
+    return { ok: true, status: telegramStatusPayload() };
+  }
+
+  if (scriptName === 'console-app') {
+    consoleState.scriptEnabled = !!enabled;
+    send('console-status', consoleStatusPayload());
+    log(`Общий скрипт Консоль ${consoleState.scriptEnabled ? 'включён' : 'выключен'}.`);
+    return { ok: true, status: consoleStatusPayload() };
+  }
+
+  return { ok: false, message: 'Неизвестный общий скрипт.' };
+});
+
+ipcMain.handle('console-status', () => consoleStatusPayload());
+
+ipcMain.handle('console-run-command', async (_event, commandText) => {
+  try {
+    return await runConsoleCommand(commandText);
+  } catch (err) {
+    const message = err.message || String(err);
+    uiError(message);
+    return { ok: false, message };
+  }
 });
 
 ipcMain.handle('telegram-start', async (_event, payload) => {

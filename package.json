@@ -1,6 +1,6 @@
 {
   "name": "botsshink",
-  "version": "1.30.0",
+  "version": "1.31.0",
   "description": "BotsShink custom UI panel and installer for Mineflayer bots on allowed Minecraft servers.",
   "main": "main.js",
   "scripts": {

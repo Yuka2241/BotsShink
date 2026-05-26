@@ -18,6 +18,10 @@ const state = {
       serverOnline: false,
       playersOnline: false
     }
+  }),
+  consoleApp: loadJson('consoleSettings', {
+    scriptEnabled: false,
+    history: []
   })
 };
 
@@ -304,6 +308,13 @@ function isTelegramScript(script) {
   return tab === 'телега' || tab === 'telegram' || name.includes('тг') || name.includes('telegram') || file.includes('telegram');
 }
 
+function isConsoleScript(script) {
+  const tab = String(script.createTab || '').trim().toLowerCase();
+  const name = String(script.displayName || '').trim().toLowerCase();
+  const file = String(script.fileName || '').trim().toLowerCase();
+  return tab === 'консоль' || tab === 'console' || name.includes('консоль') || name.includes('console') || file.includes('console');
+}
+
 function renderScriptList() {
   const validScripts = state.scripts.filter((script) => script.valid);
   const pinnedScripts = validScripts.filter((script) => script.isPinned || script.isGlobal || script.createTab);
@@ -314,7 +325,7 @@ function renderScriptList() {
   container.className = 'script-list';
 
   const pinnedHtml = pinnedScripts.length ? pinnedScripts.map((script, index) => {
-    const enabled = isTelegramScript(script) ? !!state.telegram.scriptEnabled : false;
+    const enabled = isTelegramScript(script) ? !!state.telegram.scriptEnabled : (isConsoleScript(script) ? !!state.consoleApp.scriptEnabled : false);
     const tabText = script.createTab ? ` · вкладка: ${escapeHtml(script.createTab)}` : '';
     return `
       <div class="script-item pinned-script">
@@ -353,6 +364,12 @@ function renderScriptList() {
         await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: true });
         updateTelegramVisibility();
         renderScriptList();
+      } else if (isConsoleScript(script)) {
+        state.consoleApp.scriptEnabled = true;
+        saveConsoleSettings();
+        await window.botPanel.setGlobalScript({ scriptName: 'console-app', enabled: true });
+        updateConsoleVisibility();
+        renderScriptList();
       } else {
         showToast('Этот общий скрипт требует отдельного обработчика в приложении.');
       }
@@ -367,6 +384,12 @@ function renderScriptList() {
         saveTelegramSettings();
         await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: false });
         updateTelegramVisibility();
+        renderScriptList();
+      } else if (isConsoleScript(script)) {
+        state.consoleApp.scriptEnabled = false;
+        saveConsoleSettings();
+        await window.botPanel.setGlobalScript({ scriptName: 'console-app', enabled: false });
+        updateConsoleVisibility();
         renderScriptList();
       }
     });
@@ -389,6 +412,59 @@ function updateTelegramVisibility() {
     const homeBtn = document.querySelector('.tab-button[data-tab="home"]');
     if (homeBtn) homeBtn.click();
   }
+}
+
+function saveConsoleSettings() {
+  saveJson('consoleSettings', state.consoleApp);
+}
+
+function updateConsoleVisibility() {
+  const button = $('consoleTabButton');
+  const panel = $('console');
+  if (!button || !panel) return;
+  const visible = !!state.consoleApp.scriptEnabled;
+  button.classList.toggle('hidden', !visible);
+  if (!visible && panel.classList.contains('active')) {
+    const homeBtn = document.querySelector('.tab-button[data-tab="home"]');
+    if (homeBtn) homeBtn.click();
+  }
+  setConsoleStatus({ scriptEnabled: visible });
+}
+
+function addConsoleLine(line) {
+  const output = $('consoleOutput');
+  if (!output) return;
+  const stamp = new Date().toLocaleTimeString('ru-RU', { hour12: false });
+  const text = `[${stamp}] ${line}`;
+  state.consoleApp.history = [...(state.consoleApp.history || []), text].slice(-200);
+  saveConsoleSettings();
+  output.textContent = state.consoleApp.history.join('\n');
+  output.scrollTop = output.scrollHeight;
+}
+
+function renderConsoleHistory() {
+  const output = $('consoleOutput');
+  if (!output) return;
+  output.textContent = (state.consoleApp.history || []).join('\n');
+  output.scrollTop = output.scrollHeight;
+}
+
+function setConsoleStatus(status) {
+  const badge = $('consoleStatusBadge');
+  if (!badge) return;
+  const enabled = status && typeof status.scriptEnabled === 'boolean' ? status.scriptEnabled : !!state.consoleApp.scriptEnabled;
+  badge.textContent = enabled ? 'Готово' : 'Отключено';
+}
+
+async function runConsoleCommand() {
+  const input = $('consoleCommandInput');
+  if (!input) return;
+  const command = input.value.trim();
+  if (!command) return;
+  addConsoleLine(`> ${command}`);
+  const result = await window.botPanel.runConsoleCommand(command);
+  addConsoleLine(result && result.message ? result.message : 'Команда выполнена.');
+  if (result && result.ok) input.value = '';
 }
 
 function renderTelegramSettings() {
@@ -613,6 +689,18 @@ function initEvents() {
   $('checkUpdateBtn').addEventListener('click', () => checkUpdates(true));
   bindClick('telegramStartBtn', startTelegram);
   bindClick('telegramStopBtn', stopTelegram);
+  bindClick('consoleRunBtn', runConsoleCommand);
+  bindClick('consoleClearBtn', () => {
+    state.consoleApp.history = [];
+    saveConsoleSettings();
+    renderConsoleHistory();
+  });
+  const consoleCommandInput = $('consoleCommandInput');
+  if (consoleCommandInput) {
+    consoleCommandInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') runConsoleCommand();
+    });
+  }
   document.querySelectorAll('.telegram-feature-toggle').forEach((button) => {
     button.addEventListener('click', () => {
       const row = button.closest('.telegram-feature-row');
@@ -722,6 +810,14 @@ function initIpc() {
   });
   window.botPanel.onWindowState(updateWindowState);
   window.botPanel.onTelegramStatus(setTelegramStatus);
+  window.botPanel.onConsoleStatus((status) => {
+    if (status && typeof status.scriptEnabled === 'boolean') {
+      state.consoleApp.scriptEnabled = status.scriptEnabled;
+      saveConsoleSettings();
+    }
+    updateConsoleVisibility();
+    setConsoleStatus(status);
+  });
 }
 
 (async function main() {
@@ -735,7 +831,10 @@ function initIpc() {
   renderBotRows();
   renderScriptList();
   renderTelegramSettings();
+  renderConsoleHistory();
+  updateConsoleVisibility();
   await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: !!state.telegram.scriptEnabled });
+  await window.botPanel.setGlobalScript({ scriptName: 'console-app', enabled: !!state.consoleApp.scriptEnabled });
   renderHomeStatuses();
   refreshCounts();
   setTimeout(() => checkUpdates(false), 1500);

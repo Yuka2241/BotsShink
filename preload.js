@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('botPanel', {
   startTelegram: (payload) => ipcRenderer.invoke('telegram-start', payload),
   stopTelegram: () => ipcRenderer.invoke('telegram-stop'),
   getTelegramStatus: () => ipcRenderer.invoke('telegram-status'),
+  getConsoleStatus: () => ipcRenderer.invoke('console-status'),
+  runConsoleCommand: (commandText) => ipcRenderer.invoke('console-run-command', commandText),
   checkUpdates: () => ipcRenderer.invoke('check-updates'),
   openUpdatePage: (url) => ipcRenderer.invoke('open-update-page', url),
   minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
@@ -27,5 +29,6 @@ contextBridge.exposeInMainWorld('botPanel', {
   onActiveCount: (callback) => ipcRenderer.on('active-count', (_event, value) => callback(value)),
   onPlayersList: (callback) => ipcRenderer.on('players-list', (_event, value) => callback(value)),
   onWindowState: (callback) => ipcRenderer.on('window-state', (_event, value) => callback(value)),
-  onTelegramStatus: (callback) => ipcRenderer.on('telegram-status', (_event, value) => callback(value))
+  onTelegramStatus: (callback) => ipcRenderer.on('telegram-status', (_event, value) => callback(value)),
+  onConsoleStatus: (callback) => ipcRenderer.on('console-status', (_event, value) => callback(value))
 });

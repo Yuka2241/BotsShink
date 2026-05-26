@@ -40,6 +40,7 @@
         <button class="tab-button" data-tab="bots">Боты</button>
         <button class="tab-button" data-tab="scripts">Скрипты</button>
         <button id="telegramTabButton" class="tab-button telegram-tab hidden" data-tab="telegram">Телега</button>
+        <button id="consoleTabButton" class="tab-button console-tab hidden" data-tab="console">Консоль</button>
       </nav>
 
       <div class="sidebar-card">
@@ -166,7 +167,7 @@
 
         <section class="card">
           <h3>Формат скрипта</h3>
-          <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Русское название</span><br><span>// BotSkripts-Config: targetPlayer</span><br><span>// BotSkripts-Global: true</span><br><span>// BotSkripts-Pinned: true</span><br><span>// BotSkripts-CreateTab: Телега</span></div>
+          <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Русское название</span><br><span>// BotSkripts-Config: targetPlayer</span><br><span>// BotSkripts-Global: true</span><br><span>// BotSkripts-Pinned: true</span><br><span>// BotSkripts-CreateTab: Телега</span><br><span>// BotSkripts-CreateTab: Консоль</span></div>
           <p class="hint">Первая строка обязательна. Global/Pinned закрепляет общий скрипт во вкладке Скрипты. CreateTab говорит приложению, какую вкладку открыть после включения.</p>
         </section>
 
@@ -249,6 +250,36 @@
         <section class="card">
           <h3>Как будет работать</h3>
           <div class="code-box">/start<br><span>Telegram покажет кнопки только тех функций, которые включены в этой вкладке.</span><br><span>Нажми функцию → появятся кнопки Вкл / Выкл.</span></div>
+        </section>
+      </section>
+
+      <section id="console" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h2>Консоль</h2>
+            <p>Управление онлайн-ботами через команды.</p>
+          </div>
+          <span id="consoleStatusBadge" class="badge neutral">Отключено</span>
+        </header>
+
+        <section class="card">
+          <div class="section-title-row">
+            <h3>Команда</h3>
+            <span class="hint">Формат: say "ник" "сообщение"</span>
+          </div>
+          <div class="console-command-row">
+            <input id="consoleCommandInput" type="text" placeholder='say "Bot_1" "Привет"' autocomplete="off" />
+            <button id="consoleRunBtn" class="primary-button" type="button">Выполнить</button>
+          </div>
+          <div class="code-box console-help">say "Bot_1" "Привет"<br><span>Отправит сообщение от имени Bot_1.</span><br>say all "Привет всем"<br><span>Отправит сообщение от всех онлайн-ботов.</span></div>
+        </section>
+
+        <section class="card log-card">
+          <div class="section-title-row">
+            <h3>История консоли</h3>
+            <button id="consoleClearBtn" class="ghost-button" type="button">Очистить</button>
+          </div>
+          <pre id="consoleOutput"></pre>
         </section>
       </section>
     </main>
