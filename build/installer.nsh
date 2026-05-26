@@ -25,6 +25,13 @@
   CreateDirectory "$INSTDIR\BotSkripts"
   CreateDirectory "$INSTDIR\logo"
   CreateDirectory "$INSTDIR\logs"
+
+  ; Basic shortcuts without the electron-builder WinShell plugin.
+  ; This avoids the Temp\WinShell.dll extraction issue on some Windows systems.
+  CreateDirectory "$SMPROGRAMS\BotsShink"
+  CreateShortCut "$SMPROGRAMS\BotsShink\BotsShink.lnk" "$INSTDIR\BotsShink.exe"
+  CreateShortCut "$SMPROGRAMS\BotsShink\Uninstall BotsShink.lnk" "$INSTDIR\Uninstall BotsShink.exe"
+  CreateShortCut "$DESKTOP\BotsShink.lnk" "$INSTDIR\BotsShink.exe"
 !macroend
 
 !macro customUnInstall
@@ -39,4 +46,10 @@
     RMDir /r "$INSTDIR\cache"
     Delete "$INSTDIR\BotsShink.install.marker"
   BotsShinkSkipRuntimeDelete:
+
+  ; Remove only BotsShink shortcuts created by this installer.
+  Delete "$DESKTOP\BotsShink.lnk"
+  Delete "$SMPROGRAMS\BotsShink\BotsShink.lnk"
+  Delete "$SMPROGRAMS\BotsShink\Uninstall BotsShink.lnk"
+  RMDir "$SMPROGRAMS\BotsShink"
 !macroend

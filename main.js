@@ -44,6 +44,32 @@ const scripts = new Map();
  */
 const bots = new Map();
 
+let currentServerLabel = 'сервер не выбран';
+
+const TELEGRAM_FEATURE_LABELS = {
+  botNotifications: 'Уведомления о боте',
+  chatNotifications: 'Уведомления чата',
+  serverOnline: 'Онлайн сервера',
+  playersOnline: 'Игроки на сервере'
+};
+
+const telegramState = {
+  scriptEnabled: false,
+  running: false,
+  token: '',
+  chatId: '',
+  offset: 0,
+  pollTimer: null,
+  lastPlayersText: '',
+  lastPlayersAt: 0,
+  features: {
+    botNotifications: false,
+    chatNotifications: false,
+    serverOnline: false,
+    playersOnline: false
+  }
+};
+
 
 function copyFolderIfTargetEmpty(sourceDir, targetDir) {
   try {
@@ -232,6 +258,271 @@ async function checkForUpdates() {
   };
 }
 
+
+function telegramStatusPayload() {
+  return {
+    scriptEnabled: !!telegramState.scriptEnabled,
+    running: !!telegramState.running,
+    chatId: telegramState.chatId ? 'задан' : '',
+    features: { ...telegramState.features }
+  };
+}
+
+function sendTelegramStatus() {
+  send('telegram-status', telegramStatusPayload());
+}
+
+function escapeTelegram(text) {
+  return String(text ?? '').slice(0, 3500);
+}
+
+function telegramApi(method, payload = {}) {
+  return new Promise((resolve, reject) => {
+    const token = cleanText(telegramState.token);
+    if (!token) {
+      reject(new Error('Telegram token не указан.'));
+      return;
+    }
+
+    const body = JSON.stringify(payload);
+    const request = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${token}/${method}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      },
+      timeout: 18000
+    }, (response) => {
+      let data = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => { data += chunk; });
+      response.on('end', () => {
+        let parsed = null;
+        try { parsed = data ? JSON.parse(data) : null; } catch (_) {}
+
+        if (response.statusCode < 200 || response.statusCode >= 300 || !parsed || parsed.ok === false) {
+          const description = parsed && parsed.description ? parsed.description : `Telegram ответил кодом ${response.statusCode}`;
+          reject(new Error(description));
+          return;
+        }
+
+        resolve(parsed.result);
+      });
+    });
+
+    request.on('timeout', () => request.destroy(new Error('Таймаут Telegram API.')));
+    request.on('error', reject);
+    request.write(body);
+    request.end();
+  });
+}
+
+function telegramKeyboard() {
+  const rows = [];
+  for (const [key, label] of Object.entries(TELEGRAM_FEATURE_LABELS)) {
+    if (telegramState.features[key]) rows.push([{ text: label }]);
+  }
+  rows.push([{ text: 'Меню' }]);
+  return {
+    keyboard: rows,
+    resize_keyboard: true,
+    one_time_keyboard: false
+  };
+}
+
+function telegramFeatureButtons(featureKey) {
+  return {
+    inline_keyboard: [[
+      { text: 'Вкл', callback_data: `feature:${featureKey}:on` },
+      { text: 'Выкл', callback_data: `feature:${featureKey}:off` }
+    ]]
+  };
+}
+
+async function telegramSend(text, replyMarkup = null) {
+  if (!telegramState.running || !telegramState.chatId) return;
+  const payload = {
+    chat_id: telegramState.chatId,
+    text: escapeTelegram(text),
+    disable_web_page_preview: true
+  };
+  if (replyMarkup) payload.reply_markup = replyMarkup;
+  await telegramApi('sendMessage', payload);
+}
+
+function getOnlineBotNames() {
+  return [...bots.values()].filter((record) => record.status === 'online').map((record) => record.username);
+}
+
+function getPlayersText() {
+  const all = new Set();
+  for (const record of bots.values()) {
+    const bot = record.bot;
+    if (!bot || !bot.entities) continue;
+    for (const entity of Object.values(bot.entities)) {
+      if (entity && entity.type === 'player' && entity.username && entity.username !== record.username) all.add(entity.username);
+    }
+  }
+  const list = [...all].sort((a, b) => a.localeCompare(b));
+  return list.length ? list.join(', ') : 'Игроков не видно.';
+}
+
+function getServerOnlineText() {
+  const online = getOnlineBotNames();
+  return [
+    'Онлайн сервера',
+    `Сервер: ${currentServerLabel}`,
+    `Боты онлайн: ${online.length}`,
+    `Ники: ${online.length ? online.join(', ') : 'нет'}`
+  ].join('\n');
+}
+
+async function telegramShowMenu() {
+  const enabled = Object.entries(TELEGRAM_FEATURE_LABELS).filter(([key]) => telegramState.features[key]);
+  const list = enabled.length ? enabled.map(([, label]) => `• ${label}`).join('\n') : 'В приложении не включена ни одна функция.';
+  await telegramSend(`BotsShink Telegram меню\n\nАктивные функции:\n${list}\n\nНажми кнопку функции, потом выбери Вкл или Выкл.`, telegramKeyboard());
+}
+
+async function telegramHandleFeatureMessage(featureKey) {
+  const label = TELEGRAM_FEATURE_LABELS[featureKey];
+  if (!label || !telegramState.features[featureKey]) {
+    await telegramShowMenu();
+    return;
+  }
+
+  let extra = '';
+  if (featureKey === 'serverOnline') extra = `\n\n${getServerOnlineText()}`;
+  if (featureKey === 'playersOnline') extra = `\n\nИгроки на сервере:\n${getPlayersText()}`;
+
+  await telegramSend(`${label}\nВыбери действие.${extra}`, telegramFeatureButtons(featureKey));
+}
+
+async function telegramHandleUpdate(update) {
+  if (!update) return;
+
+  if (update.callback_query) {
+    const query = update.callback_query;
+    const data = String(query.data || '');
+    if (query.message && String(query.message.chat.id) !== String(telegramState.chatId)) return;
+
+    const match = data.match(/^feature:([a-zA-Z]+):(on|off)$/);
+    if (match) {
+      const featureKey = match[1];
+      const enabled = match[2] === 'on';
+      if (Object.prototype.hasOwnProperty.call(telegramState.features, featureKey)) {
+        telegramState.features[featureKey] = enabled;
+        sendTelegramStatus();
+        await telegramApi('answerCallbackQuery', { callback_query_id: query.id, text: enabled ? 'Включено' : 'Выключено' }).catch(() => {});
+        await telegramSend(`${TELEGRAM_FEATURE_LABELS[featureKey]}: ${enabled ? 'включено' : 'выключено'}`, telegramKeyboard());
+      }
+    }
+    return;
+  }
+
+  const message = update.message;
+  if (!message || !message.chat) return;
+  if (String(message.chat.id) !== String(telegramState.chatId)) return;
+
+  const text = cleanText(message.text);
+  if (!text || text === '/start' || text === 'Меню') {
+    await telegramShowMenu();
+    return;
+  }
+
+  for (const [key, label] of Object.entries(TELEGRAM_FEATURE_LABELS)) {
+    if (text === label) {
+      await telegramHandleFeatureMessage(key);
+      return;
+    }
+  }
+
+  await telegramShowMenu();
+}
+
+async function telegramPollOnce() {
+  if (!telegramState.running) return;
+  try {
+    const updates = await telegramApi('getUpdates', {
+      offset: telegramState.offset,
+      timeout: 1,
+      allowed_updates: ['message', 'callback_query']
+    });
+
+    if (Array.isArray(updates)) {
+      for (const update of updates) {
+        telegramState.offset = Math.max(telegramState.offset, Number(update.update_id || 0) + 1);
+        await telegramHandleUpdate(update);
+      }
+    }
+  } catch (err) {
+    log(`Telegram: ошибка: ${err.message || err}`);
+  }
+}
+
+function startTelegramPolling() {
+  if (telegramState.pollTimer) clearInterval(telegramState.pollTimer);
+  telegramState.pollTimer = setInterval(() => {
+    telegramPollOnce().catch((err) => log(`Telegram: ошибка polling: ${err.message || err}`));
+  }, 1800);
+}
+
+async function startTelegram(payload = {}) {
+  telegramState.token = cleanText(payload.token);
+  telegramState.chatId = cleanText(payload.chatId);
+  telegramState.features = {
+    botNotifications: !!(payload.features && payload.features.botNotifications),
+    chatNotifications: !!(payload.features && payload.features.chatNotifications),
+    serverOnline: !!(payload.features && payload.features.serverOnline),
+    playersOnline: !!(payload.features && payload.features.playersOnline)
+  };
+
+  if (!telegramState.scriptEnabled) throw new Error('Сначала включи скрипт “ТГ-приложение” во вкладке Скрипты.');
+  if (!telegramState.token) throw new Error('Укажи токен Telegram-бота.');
+  if (!telegramState.chatId) throw new Error('Укажи свой Chat ID.');
+
+  const me = await telegramApi('getMe', {});
+  telegramState.running = true;
+  telegramState.offset = 0;
+  telegramState.lastPlayersText = '';
+  startTelegramPolling();
+  sendTelegramStatus();
+  log(`Telegram: запущен бот @${me.username || me.first_name || 'unknown'}.`);
+  await telegramSend('BotsShink Telegram запущен. Нажми /start или кнопку Меню.', telegramKeyboard());
+  return { ok: true, message: `Telegram запущен: @${me.username || me.first_name || 'unknown'}` };
+}
+
+function stopTelegram() {
+  if (telegramState.pollTimer) clearInterval(telegramState.pollTimer);
+  telegramState.pollTimer = null;
+  telegramState.running = false;
+  sendTelegramStatus();
+  log('Telegram: остановлен.');
+  return { ok: true, message: 'Telegram остановлен.' };
+}
+
+function telegramNotifyBot(message) {
+  if (!telegramState.running || !telegramState.features.botNotifications) return;
+  telegramSend(`BotsShink\n${message}`).catch((err) => log(`Telegram: не отправлено уведомление о боте: ${err.message || err}`));
+}
+
+function telegramNotifyChat(username, message, botName) {
+  if (!telegramState.running || !telegramState.features.chatNotifications) return;
+  telegramSend(`Чат Minecraft${botName ? ` (${botName})` : ''}\n${username}: ${message}`).catch((err) => log(`Telegram: не отправлено сообщение чата: ${err.message || err}`));
+}
+
+function telegramMaybeNotifyPlayers() {
+  if (!telegramState.running || !telegramState.features.playersOnline) return;
+  const now = Date.now();
+  if (now - telegramState.lastPlayersAt < 15000) return;
+  const text = getPlayersText();
+  if (text === telegramState.lastPlayersText) return;
+  telegramState.lastPlayersText = text;
+  telegramState.lastPlayersAt = now;
+  telegramSend(`Игроки на сервере:\n${text}`).catch((err) => log(`Telegram: не отправлен список игроков: ${err.message || err}`));
+}
+
 function isValidNick(nick) {
   return /^[A-Za-z0-9_]{3,16}$/.test(nick);
 }
@@ -268,9 +559,15 @@ function sendBotStatuses() {
 function setBotStatus(username, status, reason = '') {
   const record = bots.get(username);
   if (!record) return;
+  const previousStatus = record.status;
   record.status = status;
   record.reason = reason;
   sendBotStatuses();
+
+  if (previousStatus !== status && ['online', 'offline', 'error', 'kicked'].includes(status)) {
+    const label = { online: 'онлайн', offline: 'отключён', error: 'ошибка', kicked: 'кикнут' }[status] || status;
+    telegramNotifyBot(`${username}: ${label}${reason ? `\n${reason}` : ''}`);
+  }
 }
 
 function readScriptSource(fullPath) {
@@ -289,6 +586,9 @@ function parseScriptMeta(fileName, fullPath) {
     const lines = raw.split(/\r?\n/).slice(0, 16);
     let displayName = fileName.replace(/\.js$/i, '').replace(/[_-]+/g, ' ');
     let hasTargetPlayer = false;
+    let isGlobal = false;
+    let isPinned = false;
+    let createTab = '';
 
     for (const line of lines) {
       const nameMatch = line.match(/^\s*\/\/\s*BotSkripts-Name\s*:\s*(.+)\s*$/i);
@@ -299,6 +599,15 @@ function parseScriptMeta(fileName, fullPath) {
         const parts = configMatch[1].split(',').map((s) => s.trim().toLowerCase());
         hasTargetPlayer = parts.includes('targetplayer') || parts.includes('target-player') || parts.includes('target_player');
       }
+
+      const globalMatch = line.match(/^\s*\/\/\s*BotSkripts-Global\s*:\s*(.+)\s*$/i);
+      if (globalMatch) isGlobal = ['true', 'yes', '1', 'on', 'да', 'вкл'].includes(globalMatch[1].trim().toLowerCase());
+
+      const pinnedMatch = line.match(/^\s*\/\/\s*BotSkripts-Pinned\s*:\s*(.+)\s*$/i);
+      if (pinnedMatch) isPinned = ['true', 'yes', '1', 'on', 'да', 'вкл'].includes(pinnedMatch[1].trim().toLowerCase());
+
+      const tabMatch = line.match(/^\s*\/\/\s*BotSkripts-CreateTab\s*:\s*(.+)\s*$/i);
+      if (tabMatch) createTab = tabMatch[1].trim();
     }
 
     return {
@@ -306,6 +615,9 @@ function parseScriptMeta(fileName, fullPath) {
       displayName,
       fullPath,
       hasTargetPlayer,
+      isGlobal,
+      isPinned,
+      createTab,
       valid: true,
       error: '',
       updatedAt: Date.now()
@@ -316,6 +628,9 @@ function parseScriptMeta(fileName, fullPath) {
       displayName: fileName,
       fullPath,
       hasTargetPlayer: false,
+      isGlobal: false,
+      isPinned: false,
+      createTab: '',
       valid: false,
       error: err.message || String(err),
       updatedAt: Date.now()
@@ -348,6 +663,9 @@ function loadScriptsFromFolder({ announce = false, reapply = false } = {}) {
     fileName: s.fileName,
     displayName: s.displayName,
     hasTargetPlayer: s.hasTargetPlayer,
+    isGlobal: !!s.isGlobal,
+    isPinned: !!s.isPinned,
+    createTab: s.createTab || '',
     valid: s.valid,
     error: s.error,
     updatedAt: s.updatedAt
@@ -630,6 +948,11 @@ async function connectBot(config, botConfig, scriptAssignments) {
 
   bot.once('login', () => {
     log(`${username}: вошёл на сервер.`);
+    telegramNotifyBot(`${username}: вошёл на сервер ${currentServerLabel}`);
+  });
+
+  bot.on('chat', (chatUsername, message) => {
+    if (chatUsername && chatUsername !== username) telegramNotifyChat(chatUsername, message, username);
   });
 
   bot.once('spawn', async () => {
@@ -691,6 +1014,7 @@ function sendKnownPlayers() {
   }
 
   send('players-list', { all: [...all].sort((a, b) => a.localeCompare(b)), byBot });
+  telegramMaybeNotifyPlayers();
 }
 
 function findLogo() {
@@ -711,6 +1035,9 @@ ipcMain.handle('get-scripts', () => {
     fileName: s.fileName,
     displayName: s.displayName,
     hasTargetPlayer: s.hasTargetPlayer,
+    isGlobal: !!s.isGlobal,
+    isPinned: !!s.isPinned,
+    createTab: s.createTab || '',
     valid: s.valid,
     error: s.error,
     updatedAt: s.updatedAt
@@ -732,6 +1059,7 @@ ipcMain.handle('open-logo-folder', async () => {
 ipcMain.handle('start-bots', async (_event, payload) => {
   try {
     const config = normalizeServerConfig(payload.server || {});
+    currentServerLabel = `${config.host}:${config.port}`;
     const rows = Array.isArray(payload.bots) ? payload.bots : [];
     const assignments = payload.scriptAssignments || {};
 
@@ -810,6 +1138,30 @@ ipcMain.handle('set-bot-script', async (_event, { username, fileName, enabled, o
 });
 
 
+
+
+ipcMain.handle('set-global-script', (_event, { scriptName, enabled }) => {
+  if (scriptName !== 'telegram-app') return { ok: false, message: 'Неизвестный общий скрипт.' };
+  telegramState.scriptEnabled = !!enabled;
+  if (!telegramState.scriptEnabled && telegramState.running) stopTelegram();
+  sendTelegramStatus();
+  log(`Общий скрипт ТГ-приложение ${telegramState.scriptEnabled ? 'включён' : 'выключен'}.`);
+  return { ok: true, status: telegramStatusPayload() };
+});
+
+ipcMain.handle('telegram-start', async (_event, payload) => {
+  try {
+    const result = await startTelegram(payload || {});
+    return result;
+  } catch (err) {
+    uiError(err.message || String(err));
+    return { ok: false, message: err.message || String(err) };
+  }
+});
+
+ipcMain.handle('telegram-stop', () => stopTelegram());
+
+ipcMain.handle('telegram-status', () => telegramStatusPayload());
 
 ipcMain.handle('check-updates', async () => {
   try {

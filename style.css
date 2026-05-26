@@ -1523,3 +1523,68 @@ select::-ms-expand {
     flex: 1;
   }
 }
+
+/* v1.29 Telegram tab and pinned global script */
+.hidden {
+  display: none !important;
+}
+
+.pinned-script {
+  border-color: rgba(255,255,255,0.16) !important;
+  background: rgba(255,255,255,0.055) !important;
+}
+
+.telegram-features {
+  display: grid;
+  gap: 10px;
+}
+
+.telegram-feature-row {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  background: rgba(0,0,0,0.38);
+}
+
+.telegram-feature-row strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.telegram-feature-row p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.telegram-feature-row.active {
+  background: rgba(255,255,255,0.075) !important;
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+.telegram-feature-toggle {
+  min-height: 42px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.045) !important;
+  color: rgba(255,255,255,0.62) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+}
+
+.telegram-feature-row.active .telegram-feature-toggle {
+  background: rgba(255,255,255,0.12) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,0.18) !important;
+}
+
+.telegram-hint {
+  margin: 12px 0 0;
+}
+
+.badge.neutral {
+  color: rgba(255,255,255,0.78) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}

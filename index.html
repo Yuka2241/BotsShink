@@ -39,6 +39,7 @@
         <button class="tab-button active" data-tab="home">Главная</button>
         <button class="tab-button" data-tab="bots">Боты</button>
         <button class="tab-button" data-tab="scripts">Скрипты</button>
+        <button id="telegramTabButton" class="tab-button telegram-tab hidden" data-tab="telegram">Телега</button>
       </nav>
 
       <div class="sidebar-card">
@@ -165,8 +166,8 @@
 
         <section class="card">
           <h3>Формат скрипта</h3>
-          <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Русское название</span><br><span>// BotSkripts-Config: targetPlayer</span></div>
-          <p class="hint">Первая строка обязательна. Вторая даёт русское название. Третья включает выбор игрока рядом со скриптом.</p>
+          <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Русское название</span><br><span>// BotSkripts-Config: targetPlayer</span><br><span>// BotSkripts-Global: true</span><br><span>// BotSkripts-Pinned: true</span><br><span>// BotSkripts-CreateTab: Телега</span></div>
+          <p class="hint">Первая строка обязательна. Global/Pinned закрепляет общий скрипт во вкладке Скрипты. CreateTab говорит приложению, какую вкладку открыть после включения.</p>
         </section>
 
         <section class="card">
@@ -175,6 +176,79 @@
             <button id="refreshScriptsBtn" class="secondary-button">Обновить список</button>
           </div>
           <div id="scriptList" class="script-list empty">Скрипты не найдены.</div>
+        </section>
+      </section>
+
+      <section id="telegram" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h2>Телега</h2>
+            <p>Настройка Telegram-бота для управления уведомлениями BotsShink.</p>
+          </div>
+          <div class="header-actions">
+            <button id="telegramStartBtn" class="primary-button" type="button">Запустить Телегу</button>
+            <button id="telegramStopBtn" class="danger-button" type="button">Остановить</button>
+          </div>
+        </header>
+
+        <section class="card telegram-card">
+          <div class="section-title-row">
+            <h3>Подключение Telegram</h3>
+            <span id="telegramStatusBadge" class="badge neutral">Остановлено</span>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>Токен Telegram-бота</span>
+              <input id="telegramTokenInput" type="password" placeholder="123456789:AA..." autocomplete="off" />
+            </label>
+            <label>
+              <span>Твой Chat ID</span>
+              <input id="telegramChatIdInput" type="text" placeholder="например 123456789" autocomplete="off" />
+            </label>
+          </div>
+          <p class="hint telegram-hint">Токен не показывается в логах. Chat ID нужен, чтобы приложение отвечало только тебе.</p>
+        </section>
+
+        <section class="card">
+          <div class="section-title-row">
+            <h3>Функции Telegram</h3>
+            <span class="hint">Включённые функции появятся кнопками у твоего Telegram-бота.</span>
+          </div>
+          <div class="telegram-features">
+            <div class="telegram-feature-row" data-feature="botNotifications">
+              <div>
+                <strong>Уведомления о боте</strong>
+                <p>Вход, выход, кик, ошибка и изменение статуса ботов.</p>
+              </div>
+              <button class="telegram-feature-toggle" type="button">Выкл</button>
+            </div>
+            <div class="telegram-feature-row" data-feature="chatNotifications">
+              <div>
+                <strong>Уведомления чата</strong>
+                <p>Отправляет в Telegram всё, что происходит в игровом чате.</p>
+              </div>
+              <button class="telegram-feature-toggle" type="button">Выкл</button>
+            </div>
+            <div class="telegram-feature-row" data-feature="serverOnline">
+              <div>
+                <strong>Онлайн сервера</strong>
+                <p>Показывает онлайн BotsShink-ботов и текущий сервер.</p>
+              </div>
+              <button class="telegram-feature-toggle" type="button">Выкл</button>
+            </div>
+            <div class="telegram-feature-row" data-feature="playersOnline">
+              <div>
+                <strong>Игроки на сервере</strong>
+                <p>Показывает игроков, которых видят подключённые боты.</p>
+              </div>
+              <button class="telegram-feature-toggle" type="button">Выкл</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Как будет работать</h3>
+          <div class="code-box">/start<br><span>Telegram покажет кнопки только тех функций, которые включены в этой вкладке.</span><br><span>Нажми функцию → появятся кнопки Вкл / Выкл.</span></div>
         </section>
       </section>
     </main>

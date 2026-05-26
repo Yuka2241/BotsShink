@@ -1,0 +1,17 @@
+Исправление ошибки 404 в web-installer
+
+Причина ошибки:
+В версии 1.25.0 appPackageUrl был указан как полный путь к файлу .7z.
+NSIS-web сам добавляет имя файла пакета, поэтому получался неправильный URL:
+.../botsshink-1.25.0-x64.nsis.7z/botsshink-1.25.0-x64.nsis.7z
+
+Что исправлено в 1.27.0:
+appPackageUrl теперь указывает на папку релиза:
+https://github.com/Yuka2241/BotsShink/releases/download/v${version}/
+
+После сборки создай GitHub Release с тегом v1.27.0 и загрузи туда файлы из dist/nsis-web:
+- BotsShink-Web-Setup-1.27.0.exe
+- botsshink-1.27.0-x64.nsis.7z
+- latest.yml
+
+Не используй старый BotsShink-Web-Setup-1.25.0.exe, он уже содержит неправильный URL.

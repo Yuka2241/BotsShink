@@ -7,7 +7,18 @@ const state = {
   players: { all: [], byBot: {} },
   assignments: loadJson('botScriptAssignments', {}),
   sidebarCollapsed: loadJson('sidebarCollapsed', false),
-  updateInfo: null
+  updateInfo: null,
+  telegram: loadJson('telegramSettings', {
+    scriptEnabled: false,
+    token: '',
+    chatId: '',
+    features: {
+      botNotifications: false,
+      chatNotifications: false,
+      serverOnline: false,
+      playersOnline: false
+    }
+  })
 };
 
 const $ = (id) => document.getElementById(id);
@@ -286,19 +297,41 @@ function getTargetOptions(username, selected) {
   }).join('');
 }
 
+function isTelegramScript(script) {
+  const tab = String(script.createTab || '').trim().toLowerCase();
+  const name = String(script.displayName || '').trim().toLowerCase();
+  const file = String(script.fileName || '').trim().toLowerCase();
+  return tab === 'телега' || tab === 'telegram' || name.includes('тг') || name.includes('telegram') || file.includes('telegram');
+}
+
 function renderScriptList() {
-  $('scriptCount').textContent = String(state.scripts.filter((script) => script.valid).length);
+  const validScripts = state.scripts.filter((script) => script.valid);
+  const pinnedScripts = validScripts.filter((script) => script.isPinned || script.isGlobal || script.createTab);
+  const normalScriptItems = state.scripts.filter((script) => !(script.isPinned || script.isGlobal || script.createTab));
+  $('scriptCount').textContent = String(validScripts.length);
   const container = $('scriptList');
 
-  if (!state.scripts.length) {
-    container.className = 'script-list empty';
-    container.textContent = 'Скрипты не найдены.';
-    renderBotCards();
-    return;
-  }
-
   container.className = 'script-list';
-  container.innerHTML = state.scripts.map((script) => `
+
+  const pinnedHtml = pinnedScripts.length ? pinnedScripts.map((script, index) => {
+    const enabled = isTelegramScript(script) ? !!state.telegram.scriptEnabled : false;
+    const tabText = script.createTab ? ` · вкладка: ${escapeHtml(script.createTab)}` : '';
+    return `
+      <div class="script-item pinned-script">
+        <div>
+          <strong>${escapeHtml(script.displayName)}</strong>
+          <p>Закреплённый общий скрипт${tabText}. ${escapeHtml(script.fileName)}</p>
+        </div>
+        <div class="script-actions">
+          <button class="toggle-symbol on pinned-on" data-index="${index}" type="button" title="Включить">✦</button>
+          <button class="toggle-symbol off pinned-off" data-index="${index}" type="button" title="Выключить">━</button>
+        </div>
+      </div>
+    `.replace('toggle-symbol on pinned-on', `toggle-symbol on pinned-on ${enabled ? 'active' : ''}`)
+     .replace('toggle-symbol off pinned-off', `toggle-symbol off pinned-off ${enabled ? '' : 'active'}`);
+  }).join('') : '';
+
+  const normalScripts = normalScriptItems.length ? normalScriptItems.map((script) => `
     <div class="script-item">
       <div>
         <strong>${escapeHtml(script.displayName)}</strong>
@@ -307,9 +340,115 @@ function renderScriptList() {
       </div>
       <span class="badge ${script.valid ? 'ready' : 'invalid'}">${script.valid ? 'Готов' : 'Ошибка'}</span>
     </div>
-  `).join('');
+  `).join('') : '<div class="empty">Обычные скрипты не найдены.</div>';
+
+  container.innerHTML = `${pinnedHtml}${normalScripts}`;
+
+  container.querySelectorAll('.pinned-on').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const script = pinnedScripts[Number(button.dataset.index)];
+      if (isTelegramScript(script)) {
+        state.telegram.scriptEnabled = true;
+        saveTelegramSettings();
+        await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: true });
+        updateTelegramVisibility();
+        renderScriptList();
+      } else {
+        showToast('Этот общий скрипт требует отдельного обработчика в приложении.');
+      }
+    });
+  });
+
+  container.querySelectorAll('.pinned-off').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const script = pinnedScripts[Number(button.dataset.index)];
+      if (isTelegramScript(script)) {
+        state.telegram.scriptEnabled = false;
+        saveTelegramSettings();
+        await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: false });
+        updateTelegramVisibility();
+        renderScriptList();
+      }
+    });
+  });
 
   renderBotCards();
+}
+
+function saveTelegramSettings() {
+  saveJson('telegramSettings', state.telegram);
+}
+
+function updateTelegramVisibility() {
+  const button = $('telegramTabButton');
+  const panel = $('telegram');
+  if (!button || !panel) return;
+  const visible = !!state.telegram.scriptEnabled;
+  button.classList.toggle('hidden', !visible);
+  if (!visible && panel.classList.contains('active')) {
+    const homeBtn = document.querySelector('.tab-button[data-tab="home"]');
+    if (homeBtn) homeBtn.click();
+  }
+}
+
+function renderTelegramSettings() {
+  const token = $('telegramTokenInput');
+  const chatId = $('telegramChatIdInput');
+  if (token) token.value = state.telegram.token || '';
+  if (chatId) chatId.value = state.telegram.chatId || '';
+
+  document.querySelectorAll('.telegram-feature-row').forEach((row) => {
+    const key = row.dataset.feature;
+    const active = !!(state.telegram.features && state.telegram.features[key]);
+    row.classList.toggle('active', active);
+    const btn = row.querySelector('.telegram-feature-toggle');
+    if (btn) btn.textContent = active ? 'Вкл' : 'Выкл';
+  });
+
+  updateTelegramVisibility();
+}
+
+function collectTelegramSettings() {
+  state.telegram.token = $('telegramTokenInput').value.trim();
+  state.telegram.chatId = $('telegramChatIdInput').value.trim();
+  saveTelegramSettings();
+  return {
+    token: state.telegram.token,
+    chatId: state.telegram.chatId,
+    features: state.telegram.features
+  };
+}
+
+function setTelegramStatus(status) {
+  const badge = $('telegramStatusBadge');
+  if (!badge) return;
+  if (status && status.running) {
+    badge.textContent = 'Запущено';
+  } else if (state.telegram.scriptEnabled) {
+    badge.textContent = 'Готово';
+  } else {
+    badge.textContent = 'Остановлено';
+  }
+  if (status && status.features) {
+    state.telegram.features = { ...state.telegram.features, ...status.features };
+    saveTelegramSettings();
+    renderTelegramSettings();
+  }
+}
+
+async function startTelegram() {
+  const payload = collectTelegramSettings();
+  const result = await window.botPanel.startTelegram(payload);
+  if (result && result.message) addLog(`UI: ${result.message}`);
+  const status = await window.botPanel.getTelegramStatus();
+  setTelegramStatus(status);
+}
+
+async function stopTelegram() {
+  const result = await window.botPanel.stopTelegram();
+  if (result && result.message) addLog(`UI: ${result.message}`);
+  const status = await window.botPanel.getTelegramStatus();
+  setTelegramStatus(status);
 }
 
 function refreshCounts() {
@@ -472,6 +611,26 @@ function initEvents() {
   for (const id of ['startBtn', 'startBtn2']) $(id).addEventListener('click', startBots);
   $('sidebarToggleBtn').addEventListener('click', toggleSidebar);
   $('checkUpdateBtn').addEventListener('click', () => checkUpdates(true));
+  bindClick('telegramStartBtn', startTelegram);
+  bindClick('telegramStopBtn', stopTelegram);
+  document.querySelectorAll('.telegram-feature-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest('.telegram-feature-row');
+      if (!row) return;
+      const key = row.dataset.feature;
+      state.telegram.features[key] = !state.telegram.features[key];
+      saveTelegramSettings();
+      renderTelegramSettings();
+    });
+  });
+  for (const id of ['telegramTokenInput', 'telegramChatIdInput']) {
+    const input = $(id);
+    if (input) input.addEventListener('input', () => {
+      state.telegram.token = $('telegramTokenInput').value.trim();
+      state.telegram.chatId = $('telegramChatIdInput').value.trim();
+      saveTelegramSettings();
+    });
+  }
   $('updateCloseBtn').addEventListener('click', () => setUpdateBanner(null, 'hidden'));
   $('updateOpenBtn').addEventListener('click', async () => {
     const url = state.updateInfo && (state.updateInfo.releaseUrl || state.updateInfo.assetUrl);
@@ -562,6 +721,7 @@ function initIpc() {
     renderBotCards();
   });
   window.botPanel.onWindowState(updateWindowState);
+  window.botPanel.onTelegramStatus(setTelegramStatus);
 }
 
 (async function main() {
@@ -574,6 +734,8 @@ function initIpc() {
   applySidebarState();
   renderBotRows();
   renderScriptList();
+  renderTelegramSettings();
+  await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: !!state.telegram.scriptEnabled });
   renderHomeStatuses();
   refreshCounts();
   setTimeout(() => checkUpdates(false), 1500);

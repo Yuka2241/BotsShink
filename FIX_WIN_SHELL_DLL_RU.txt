@@ -1,0 +1,15 @@
+BotsShink v1.27.0
+
+Исправление ошибки установки:
+Извлечение: ошибка записи файла ... Temp\...\WinShell.dll
+
+Что изменено:
+- Отключены стандартные shortcut-механизмы electron-builder, которые могут требовать WinShell.dll.
+- Добавлены простые ярлыки через встроенную команду NSIS CreateShortCut.
+- Installer всё ещё скачивает основной пакет с GitHub Releases.
+- Uninstall.exe сохраняется и удаляет только файлы BotsShink.
+
+Для релиза GitHub нужно создать tag v1.27.0 и загрузить:
+- BotsShink-Web-Setup-1.27.0.exe
+- botsshink-1.27.0-x64.nsis.7z
+- latest.yml
