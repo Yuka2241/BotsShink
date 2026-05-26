@@ -35,13 +35,38 @@
         </button>
       </div>
 
-      <nav class="tabs" aria-label="Разделы">
-        <button class="tab-button active" data-tab="home">Главная</button>
-        <button class="tab-button" data-tab="bots">Боты</button>
-        <button class="tab-button" data-tab="scripts">Скрипты</button>
-        <button id="telegramTabButton" class="tab-button telegram-tab hidden" data-tab="telegram">Телега</button>
-        <button id="consoleTabButton" class="tab-button console-tab hidden" data-tab="console">Консоль</button>
+      <nav class="tabs nav-pro" aria-label="Разделы">
+        <div class="nav-group nav-group-open" data-nav-group="main">
+          <span class="nav-group-title static">Основное</span>
+          <div class="nav-group-items">
+            <button class="tab-button active" data-tab="home"><span class="nav-dot"></span>Главная</button>
+            <button class="tab-button" data-tab="bots"><span class="nav-dot"></span>Боты</button>
+            <button class="tab-button" data-tab="scripts"><span class="nav-dot"></span>Скрипты</button>
+          </div>
+        </div>
+        <div class="nav-group nav-group-open collapsible" data-nav-group="integrations">
+          <button class="nav-group-toggle" type="button" data-nav-toggle="integrations" aria-expanded="true">
+            <span>Интеграции</span><span class="nav-chevron">⌄</span>
+          </button>
+          <div class="nav-group-items">
+            <button id="telegramTabButton" class="tab-button telegram-tab hidden" data-tab="telegram"><span class="nav-dot"></span>Телега</button>
+          </div>
+        </div>
+        <div class="nav-group nav-group-open collapsible" data-nav-group="tools">
+          <button class="nav-group-toggle" type="button" data-nav-toggle="tools" aria-expanded="true">
+            <span>Инструменты</span><span class="nav-chevron">⌄</span>
+          </button>
+          <div class="nav-group-items">
+            <button id="consoleTabButton" class="tab-button console-tab hidden" data-tab="console"><span class="nav-dot"></span>Консоль</button>
+          </div>
+        </div>
       </nav>
+
+      <div class="sidebar-bottom">
+        <button class="tab-button settings-gear-button" data-tab="settings" type="button" title="Настройки" aria-label="Настройки">
+          <img src="settings_gear.png" alt="" aria-hidden="true" />
+        </button>
+      </div>
 
       <div class="sidebar-card">
         <span class="muted">Сервер</span>
@@ -253,33 +278,121 @@
         </section>
       </section>
 
-      <section id="console" class="tab-panel">
-        <header class="page-header">
+      <section id="console" class="tab-panel console-panel">
+        <header class="page-header console-header-pro">
           <div>
             <h2>Консоль</h2>
-            <p>Управление онлайн-ботами через команды.</p>
+            <p>Терминал управления ботами. Поддерживает команды для чата и быстрые действия.</p>
           </div>
           <span id="consoleStatusBadge" class="badge neutral">Отключено</span>
         </header>
 
-        <section class="card">
-          <div class="section-title-row">
-            <h3>Команда</h3>
-            <span class="hint">Формат: say "ник" "сообщение"</span>
+        <section class="card console-terminal-card">
+          <div class="terminal-topbar">
+            <div class="terminal-dots"><span></span><span></span><span></span></div>
+            <strong>BotsShink Terminal</strong>
+            <span class="hint">Enter для запуска</span>
           </div>
-          <div class="console-command-row">
+          <pre id="consoleOutput" class="terminal-output"></pre>
+          <div class="console-command-row terminal-input-row">
+            <span class="terminal-prompt">&gt;</span>
             <input id="consoleCommandInput" type="text" placeholder='say "Bot_1" "Привет"' autocomplete="off" />
             <button id="consoleRunBtn" class="primary-button" type="button">Выполнить</button>
           </div>
-          <div class="code-box console-help">say "Bot_1" "Привет"<br><span>Отправит сообщение от имени Bot_1.</span><br>say all "Привет всем"<br><span>Отправит сообщение от всех онлайн-ботов.</span></div>
         </section>
 
-        <section class="card log-card">
+        <section class="card">
           <div class="section-title-row">
-            <h3>История консоли</h3>
-            <button id="consoleClearBtn" class="ghost-button" type="button">Очистить</button>
+            <h3>Быстрые команды</h3>
+            <span class="hint">Нажми пример, чтобы вставить его в консоль.</span>
           </div>
-          <pre id="consoleOutput"></pre>
+          <div class="quick-command-grid">
+            <button class="quick-command" data-command='say "Bot_1" "Привет"'>Сообщение от бота</button>
+            <button class="quick-command" data-command='say all "Привет всем"'>Сообщение всем</button>
+            <button class="quick-command" data-command="bots">Список ботов</button>
+            <button class="quick-command" data-command='stop "Bot_1"'>Остановить бота</button>
+            <button class="quick-command" data-command="stop all">Остановить всех</button>
+            <button class="quick-command" data-command="help">Помощь</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Справка</h3>
+          <div class="command-help-grid">
+            <div><code>say "ник" "сообщение"</code><span>написать в чат от имени выбранного бота</span></div>
+            <div><code>say all "сообщение"</code><span>написать в чат от всех онлайн-ботов</span></div>
+            <div><code>bots</code><span>показать список ботов и их статусы</span></div>
+            <div><code>stop "ник"</code><span>остановить одного бота</span></div>
+            <div><code>stop all</code><span>остановить всех ботов</span></div>
+            <div><code>help</code><span>показать подсказку по командам</span></div>
+          </div>
+          <button id="consoleClearBtn" class="ghost-button" type="button">Очистить историю</button>
+        </section>
+      </section>
+
+      <section id="settings" class="tab-panel settings-panel">
+        <header class="page-header">
+          <div>
+            <h2>Настройки</h2>
+            <p>Темы, фон, прозрачность и поведение интерфейса.</p>
+          </div>
+          <button id="settingsResetBtn" class="ghost-button" type="button">Сбросить</button>
+        </header>
+
+        <div class="grid two settings-grid">
+          <section class="card settings-card">
+            <h3>Внешний вид</h3>
+            <label>
+              <span>Тема интерфейса</span>
+              <select id="themeSelect">
+                <option value="matte">Матовая</option>
+                <option value="white">Белая</option>
+              </select>
+            </label>
+            <div class="settings-option">
+              <div><strong>Размыть фон</strong><p>Делает панели мягче и глубже.</p></div>
+              <button id="blurToggle" class="settings-toggle" type="button">Выкл</button>
+            </div>
+            <div class="settings-option">
+              <div><strong>Движущиеся точки</strong><p>Анимированный фон как в текущем стиле BotsShink.</p></div>
+              <button id="dotsToggle" class="settings-toggle" type="button">Вкл</button>
+            </div>
+            <div class="settings-option">
+              <div><strong>Компактный режим</strong><p>Меньше отступов и плотнее карточки.</p></div>
+              <button id="compactToggle" class="settings-toggle" type="button">Выкл</button>
+            </div>
+          </section>
+
+          <section class="card settings-card">
+            <h3>Панели и фон</h3>
+            <label>
+              <span>Прозрачность панелей</span>
+              <input id="panelOpacityInput" type="range" min="35" max="95" value="48" />
+            </label>
+            <label>
+              <span>Скорость движения точек</span>
+              <select id="dotSpeedSelect">
+                <option value="slow">Медленно</option>
+                <option value="normal">Нормально</option>
+                <option value="fast">Быстро</option>
+              </select>
+            </label>
+            <label>
+              <span>Размер интерфейса</span>
+              <select id="uiScaleSelect">
+                <option value="normal">Обычный</option>
+                <option value="large">Крупнее</option>
+              </select>
+            </label>
+            <div class="settings-preview">
+              <div class="preview-card"><strong>Предпросмотр</strong><span>Карточка BotsShink</span></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="card">
+          <h3>Пустые состояния</h3>
+          <p class="hint">Интерфейс теперь показывает красивые подсказки, когда нет ботов, скриптов, Telegram или консоли.</p>
         </section>
       </section>
     </main>

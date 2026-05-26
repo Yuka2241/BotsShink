@@ -1017,6 +1017,15 @@ async function connectBot(config, botConfig, scriptAssignments, runId = launchRu
 
 function parseConsoleCommand(input) {
   const text = cleanText(input);
+  if (!text) return { command: '', error: 'Команда пустая.' };
+
+  if (/^help$/i.test(text)) return { command: 'help' };
+  if (/^bots$/i.test(text)) return { command: 'bots' };
+  if (/^stop\s+all$/i.test(text)) return { command: 'stop', username: 'all' };
+
+  const stopMatch = text.match(/^stop\s+"([^"]+)"\s*$/i);
+  if (stopMatch) return { command: 'stop', username: stopMatch[1].trim() };
+
   const match = text.match(/^say\s+"([^"]+)"\s+"([\s\S]*)"\s*$/i);
   if (match) {
     return { command: 'say', username: match[1].trim(), message: match[2] };
@@ -1027,7 +1036,7 @@ function parseConsoleCommand(input) {
     return { command: 'say', username: 'all', message: allMatch[1] };
   }
 
-  return { command: '', error: 'Формат команды: say "ник" "сообщение" или say all "сообщение"' };
+  return { command: '', error: 'Формат: say "ник" "сообщение", say all "сообщение", bots, stop "ник", stop all, help' };
 }
 
 async function runConsoleCommand(input) {
@@ -1035,6 +1044,33 @@ async function runConsoleCommand(input) {
 
   const parsed = parseConsoleCommand(input);
   if (parsed.error) throw new Error(parsed.error);
+
+  if (parsed.command === 'help') {
+    return { ok: true, message: 'Команды: say "ник" "сообщение" | say all "сообщение" | bots | stop "ник" | stop all | help' };
+  }
+
+  if (parsed.command === 'bots') {
+    const items = [...bots.values()].map((record) => `${record.username}: ${record.status || 'offline'}`);
+    return { ok: true, message: items.length ? `Боты:\n${items.join('\n')}` : 'Боты не созданы.' };
+  }
+
+  if (parsed.command === 'stop') {
+    if (parsed.username.toLowerCase() === 'all') {
+      launchCancelRequested = true;
+      launchRunId += 1;
+      const count = bots.size;
+      for (const username of [...bots.keys()]) stopBot(username);
+      const text = `Консоль: остановлены все боты (${count}).`;
+      log(text);
+      return { ok: true, message: text };
+    }
+
+    if (!bots.has(parsed.username)) throw new Error(`Бот "${parsed.username}" не найден.`);
+    stopBot(parsed.username);
+    const text = `Консоль: бот ${parsed.username} остановлен.`;
+    log(text);
+    return { ok: true, message: text };
+  }
 
   if (parsed.command === 'say') {
     const message = String(parsed.message || '').trim();

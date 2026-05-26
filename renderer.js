@@ -22,6 +22,19 @@ const state = {
   consoleApp: loadJson('consoleSettings', {
     scriptEnabled: false,
     history: []
+  }),
+  ui: loadJson('uiSettings', {
+    theme: 'matte',
+    blur: false,
+    dots: true,
+    compact: false,
+    panelOpacity: 48,
+    dotSpeed: 'normal',
+    uiScale: 'normal'
+  }),
+  navGroups: loadJson('navGroups', {
+    integrations: true,
+    tools: true
   })
 };
 
@@ -174,7 +187,7 @@ function renderHomeStatuses() {
 
   if (!names.length) {
     list.className = 'status-list empty';
-    list.textContent = 'Пока нет запущенных ботов.';
+    list.innerHTML = emptyStateHtml('Боты ещё не запущены', 'Добавь ники во вкладке Боты и нажми Запуск.', 'Боты');
     return;
   }
 
@@ -202,13 +215,13 @@ function renderBotCards() {
 
   if (!botNames.length) {
     container.className = 'bot-cards empty';
-    container.textContent = 'Добавь хотя бы один ник.';
+    container.innerHTML = emptyStateHtml('Боты ещё не созданы', 'Добавь первый ник, чтобы назначать ему скрипты.', 'Добавить');
     return;
   }
 
   if (!validScripts.length) {
     container.className = 'bot-cards empty';
-    container.textContent = 'Скрипты не найдены. Открой папку BotSkripts и добавь .js файл.';
+    container.innerHTML = emptyStateHtml('Нет доступных скриптов', 'Открой папку BotSkripts и добавь .js файл.', 'Скрипты');
     return;
   }
 
@@ -351,7 +364,7 @@ function renderScriptList() {
       </div>
       <span class="badge ${script.valid ? 'ready' : 'invalid'}">${script.valid ? 'Готов' : 'Ошибка'}</span>
     </div>
-  `).join('') : '<div class="empty">Обычные скрипты не найдены.</div>';
+  `).join('') : emptyStateHtml('Обычных скриптов нет', 'Закреплённые модули работают отдельно, а обычные .js можно добавить в BotSkripts.', 'JS');
 
   container.innerHTML = `${pinnedHtml}${normalScripts}`;
 
@@ -408,6 +421,7 @@ function updateTelegramVisibility() {
   if (!button || !panel) return;
   const visible = !!state.telegram.scriptEnabled;
   button.classList.toggle('hidden', !visible);
+  if (visible && state.navGroups.integrations === false) { state.navGroups.integrations = true; saveNavGroups(); applyNavGroupState(); }
   if (!visible && panel.classList.contains('active')) {
     const homeBtn = document.querySelector('.tab-button[data-tab="home"]');
     if (homeBtn) homeBtn.click();
@@ -424,6 +438,7 @@ function updateConsoleVisibility() {
   if (!button || !panel) return;
   const visible = !!state.consoleApp.scriptEnabled;
   button.classList.toggle('hidden', !visible);
+  if (visible && state.navGroups.tools === false) { state.navGroups.tools = true; saveNavGroups(); applyNavGroupState(); }
   if (!visible && panel.classList.contains('active')) {
     const homeBtn = document.querySelector('.tab-button[data-tab="home"]');
     if (homeBtn) homeBtn.click();
@@ -561,6 +576,135 @@ function escapeHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
+
+
+function emptyStateHtml(title, text, label = 'Пусто') {
+  return `
+    <div class="empty-state">
+      <div class="empty-state-mark">${escapeHtml(label).slice(0, 2)}</div>
+      <strong>${escapeHtml(title)}</strong>
+      <p>${escapeHtml(text)}</p>
+    </div>
+  `;
+}
+
+function saveUiSettings() {
+  saveJson('uiSettings', state.ui);
+}
+
+function setToggleButton(button, enabled) {
+  if (!button) return;
+  button.classList.toggle('active', !!enabled);
+  button.textContent = enabled ? 'Вкл' : 'Выкл';
+}
+
+function applyUiSettings() {
+  const ui = state.ui || {};
+  document.body.classList.toggle('theme-white', ui.theme === 'white');
+  document.body.classList.toggle('theme-matte', ui.theme !== 'white');
+  document.body.classList.toggle('bg-blur-enabled', !!ui.blur);
+  document.body.classList.toggle('dots-disabled', !ui.dots);
+  document.body.classList.toggle('compact-mode', !!ui.compact);
+  document.body.classList.toggle('ui-large', ui.uiScale === 'large');
+  document.body.dataset.dotSpeed = ui.dotSpeed || 'normal';
+  document.documentElement.style.setProperty('--panel-alpha', `${Math.max(35, Math.min(95, Number(ui.panelOpacity || 48))) / 100}`);
+
+  const themeSelect = $('themeSelect');
+  const panelOpacity = $('panelOpacityInput');
+  const dotSpeed = $('dotSpeedSelect');
+  const uiScale = $('uiScaleSelect');
+  if (themeSelect) themeSelect.value = ui.theme || 'matte';
+  if (panelOpacity) panelOpacity.value = String(ui.panelOpacity || 48);
+  if (dotSpeed) dotSpeed.value = ui.dotSpeed || 'normal';
+  if (uiScale) uiScale.value = ui.uiScale || 'normal';
+  setToggleButton($('blurToggle'), !!ui.blur);
+  setToggleButton($('dotsToggle'), ui.dots !== false);
+  setToggleButton($('compactToggle'), !!ui.compact);
+}
+
+function initSettingsEvents() {
+  const themeSelect = $('themeSelect');
+  if (themeSelect) themeSelect.addEventListener('change', () => {
+    state.ui.theme = themeSelect.value;
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  const panelOpacity = $('panelOpacityInput');
+  if (panelOpacity) panelOpacity.addEventListener('input', () => {
+    state.ui.panelOpacity = Number(panelOpacity.value || 48);
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  const dotSpeed = $('dotSpeedSelect');
+  if (dotSpeed) dotSpeed.addEventListener('change', () => {
+    state.ui.dotSpeed = dotSpeed.value;
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  const uiScale = $('uiScaleSelect');
+  if (uiScale) uiScale.addEventListener('change', () => {
+    state.ui.uiScale = uiScale.value;
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  bindClick('blurToggle', () => {
+    state.ui.blur = !state.ui.blur;
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  bindClick('dotsToggle', () => {
+    state.ui.dots = state.ui.dots === false;
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  bindClick('compactToggle', () => {
+    state.ui.compact = !state.ui.compact;
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  bindClick('settingsResetBtn', () => {
+    state.ui = { theme: 'matte', blur: false, dots: true, compact: false, panelOpacity: 48, dotSpeed: 'normal', uiScale: 'normal' };
+    saveUiSettings();
+    applyUiSettings();
+    showToast('Настройки интерфейса сброшены.');
+  });
+}
+
+
+function saveNavGroups() {
+  saveJson('navGroups', state.navGroups);
+}
+
+function applyNavGroupState() {
+  document.querySelectorAll('.nav-group.collapsible').forEach((group) => {
+    const key = group.dataset.navGroup;
+    const isOpen = state.navGroups[key] !== false;
+    const toggle = group.querySelector('.nav-group-toggle');
+    group.classList.toggle('nav-group-open', isOpen);
+    group.classList.toggle('nav-group-collapsed', !isOpen);
+    if (toggle) toggle.setAttribute('aria-expanded', String(isOpen));
+  });
+}
+
+function toggleNavGroup(key) {
+  state.navGroups[key] = state.navGroups[key] === false;
+  saveNavGroups();
+  applyNavGroupState();
+}
+
+function initNavGroups() {
+  document.querySelectorAll('.nav-group-toggle').forEach((button) => {
+    button.addEventListener('click', () => toggleNavGroup(button.dataset.navToggle));
+  });
+  applyNavGroupState();
+}
 
 function applySidebarState() {
   const shell = document.querySelector('.app-shell');
@@ -701,6 +845,15 @@ function initEvents() {
       if (event.key === 'Enter') runConsoleCommand();
     });
   }
+  document.querySelectorAll('.quick-command').forEach((button) => {
+    button.addEventListener('click', () => {
+      const input = $('consoleCommandInput');
+      if (!input) return;
+      input.value = button.dataset.command || '';
+      input.focus();
+    });
+  });
+
   document.querySelectorAll('.telegram-feature-toggle').forEach((button) => {
     button.addEventListener('click', () => {
       const row = button.closest('.telegram-feature-row');
@@ -822,11 +975,14 @@ function initIpc() {
 
 (async function main() {
   initTabs();
+  initNavGroups();
   initWindowControls();
   initEvents();
+  initSettingsEvents();
   initIpc();
   await restoreSaved();
   updateSidebarServer();
+  applyUiSettings();
   applySidebarState();
   renderBotRows();
   renderScriptList();
