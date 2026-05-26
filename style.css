@@ -2759,3 +2759,119 @@ body.theme-white .nav-dot {
 body.theme-white .tab-button.active .nav-dot {
   background: rgba(17,19,24,0.78) !important;
 }
+
+
+/* v1.35 update menu fix */
+.update-dialog.hidden {
+  display: none !important;
+}
+
+.update-dialog {
+  position: fixed;
+  inset: 46px 0 0 0;
+  z-index: 150;
+  display: grid;
+  place-items: start center;
+  padding-top: 76px;
+  background: rgba(0,0,0,0.18);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+.update-dialog-card {
+  width: min(560px, calc(100vw - 44px));
+  border-radius: 24px;
+  padding: 22px;
+  background: rgba(8, 9, 12, 0.92);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 22px 60px rgba(0,0,0,0.38);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+.update-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.update-dialog-kicker {
+  display: block;
+  font-size: 12px;
+  color: rgba(255,255,255,0.52);
+  margin-bottom: 7px;
+}
+
+.update-dialog h3 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.4px;
+}
+
+.update-dialog p {
+  margin: 14px 0 0;
+  color: rgba(255,255,255,0.68);
+  line-height: 1.55;
+}
+
+.update-dialog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.update-dialog-meta span {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+}
+
+.update-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.window-like-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.78) !important;
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.window-like-close:hover {
+  background: rgba(255,255,255,0.09) !important;
+}
+
+body.theme-white .update-dialog {
+  background: rgba(236,238,242,0.22);
+}
+
+body.theme-white .update-dialog-card {
+  background: rgba(242,244,247,0.94);
+  border-color: rgba(28,31,38,0.12);
+  box-shadow: 0 22px 52px rgba(24,28,36,0.18);
+}
+
+body.theme-white .update-dialog-kicker,
+body.theme-white .update-dialog p,
+body.theme-white .update-dialog-meta span {
+  color: rgba(22,25,31,0.62);
+}
+
+body.theme-white .update-dialog-meta span,
+body.theme-white .window-like-close {
+  background: rgba(18,22,30,0.055) !important;
+  border-color: rgba(18,22,30,0.10) !important;
+  color: rgba(18,22,30,0.72) !important;
+}

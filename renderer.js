@@ -1002,17 +1002,78 @@ function setUpdateBanner(info, mode = 'hidden') {
   openBtn.textContent = 'Открыть GitHub';
 }
 
+
+function setUpdateDialog(info, mode = 'hidden') {
+  const dialog = $('updateDialog');
+  const title = $('updateDialogTitle');
+  const text = $('updateDialogText');
+  const meta = $('updateDialogMeta');
+  const openBtn = $('updateDialogOpenBtn');
+  if (!dialog || !title || !text || !meta || !openBtn) return;
+
+  state.updateInfo = info || state.updateInfo || null;
+  dialog.classList.remove('hidden', 'available', 'neutral', 'error');
+
+  if (mode === 'hidden') {
+    dialog.classList.add('hidden');
+    return;
+  }
+
+  dialog.classList.add(mode);
+
+  const current = (info && info.currentVersion) ? info.currentVersion : 'неизвестно';
+  const latest = (info && info.latestVersion) ? info.latestVersion : 'неизвестно';
+  const asset = (info && info.assetName) ? info.assetName : '';
+
+  if (info && info.hasUpdate) {
+    title.textContent = `Доступно обновление ${latest}`;
+    text.textContent = 'Можно скачать новую версию BotsShink через GitHub Release.';
+    meta.innerHTML = `<span>Текущая: ${escapeHtml(current)}</span><span>Новая: ${escapeHtml(latest)}</span>${asset ? `<span>Файл: ${escapeHtml(asset)}</span>` : ''}`;
+    openBtn.textContent = 'Скачать с GitHub';
+    return;
+  }
+
+  if (info && info.ok === false) {
+    title.textContent = 'Не удалось проверить обновления';
+    text.textContent = info.message || 'Проверь интернет и GitHub Releases.';
+    meta.innerHTML = `<span>Текущая: ${escapeHtml(current)}</span><span>Репозиторий: GitHub Releases</span>`;
+    openBtn.textContent = 'Открыть GitHub';
+    return;
+  }
+
+  title.textContent = 'Установлена последняя версия';
+  text.textContent = (info && info.message) || 'Обновлений нет. Установленная версия актуальна.';
+  meta.innerHTML = `<span>Текущая: ${escapeHtml(current)}</span>${latest !== 'неизвестно' ? `<span>Последняя: ${escapeHtml(latest)}</span>` : ''}`;
+  openBtn.textContent = 'Открыть GitHub';
+}
+
 async function checkUpdates(manual = false) {
   if (manual) {
-    setUpdateBanner({ ok: true, message: 'Проверяем GitHub Releases...' }, 'neutral');
+    const pending = { ok: true, hasUpdate: false, currentVersion: state.appVersion || '', message: 'Проверяем GitHub Releases...' };
+    setUpdateBanner(pending, 'neutral');
+    setUpdateDialog(pending, 'neutral');
     addLog('UI: проверка обновлений...');
   }
 
-  const info = await window.botPanel.checkUpdates();
+  let info = null;
+  try {
+    info = await window.botPanel.checkUpdates();
+  } catch (err) {
+    info = {
+      ok: false,
+      hasUpdate: false,
+      currentVersion: state.appVersion || '',
+      latestVersion: '',
+      releaseUrl: 'https://github.com/Yuka2241/BotsShink/releases',
+      message: err.message || String(err)
+    };
+  }
+
   state.updateInfo = info;
 
   if (info && info.hasUpdate) {
     setUpdateBanner(info, 'available');
+    setUpdateDialog(info, 'available');
     addLog(`UI: доступно обновление ${info.latestVersion}.`);
     return;
   }
@@ -1020,6 +1081,7 @@ async function checkUpdates(manual = false) {
   if (info && info.ok === false) {
     if (manual) {
       setUpdateBanner(info, 'error');
+      setUpdateDialog(info, 'error');
       showToast(info.message || 'Не удалось проверить обновления.');
       addLog(`UI ERROR: ${info.message || 'не удалось проверить обновления.'}`);
     }
@@ -1028,10 +1090,12 @@ async function checkUpdates(manual = false) {
 
   if (manual) {
     setUpdateBanner(info, 'neutral');
+    setUpdateDialog(info, 'neutral');
     showToast((info && info.message) || 'Обновлений нет.');
     addLog(`UI: ${(info && info.message) || 'обновлений нет.'}`);
   }
 }
+
 
 function initWindowControls() {
   const minBtn = $('windowMinBtn');
@@ -1214,8 +1278,14 @@ function initEvents() {
   }
   $('updateCloseBtn').addEventListener('click', () => setUpdateBanner(null, 'hidden'));
   $('updateOpenBtn').addEventListener('click', async () => {
-    const url = state.updateInfo && (state.updateInfo.releaseUrl || state.updateInfo.assetUrl);
-    await window.botPanel.openUpdatePage(url);
+    const url = state.updateInfo && (state.updateInfo.assetUrl || state.updateInfo.releaseUrl);
+    await window.botPanel.openUpdatePage(url || 'https://github.com/Yuka2241/BotsShink/releases');
+  });
+  $('updateDialogCloseBtn').addEventListener('click', () => setUpdateDialog(null, 'hidden'));
+  $('updateDialogLaterBtn').addEventListener('click', () => setUpdateDialog(null, 'hidden'));
+  $('updateDialogOpenBtn').addEventListener('click', async () => {
+    const url = state.updateInfo && (state.updateInfo.assetUrl || state.updateInfo.releaseUrl);
+    await window.botPanel.openUpdatePage(url || 'https://github.com/Yuka2241/BotsShink/releases');
   });
   for (const id of ['stopBtn', 'stopBtn2']) $(id).addEventListener('click', stopBots);
 

@@ -91,6 +91,24 @@
         </div>
       </div>
 
+      <div id="updateDialog" class="update-dialog hidden" aria-live="polite">
+        <div class="update-dialog-card">
+          <div class="update-dialog-head">
+            <div>
+              <span class="update-dialog-kicker">Обновления</span>
+              <h3 id="updateDialogTitle">Проверка обновлений</h3>
+            </div>
+            <button id="updateDialogCloseBtn" class="window-like-close" type="button" aria-label="Закрыть">×</button>
+          </div>
+          <p id="updateDialogText">Проверяем GitHub Releases...</p>
+          <div id="updateDialogMeta" class="update-dialog-meta"></div>
+          <div class="update-dialog-actions">
+            <button id="updateDialogOpenBtn" class="secondary-button" type="button">Открыть GitHub</button>
+            <button id="updateDialogLaterBtn" class="ghost-button" type="button">Позже</button>
+          </div>
+        </div>
+      </div>
+
       <section id="home" class="tab-panel active">
         <header class="page-header">
           <div>
