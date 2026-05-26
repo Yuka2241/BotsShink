@@ -11,9 +11,20 @@
   !endif
 !macroend
 
-; customInit removed: old NSIS inside electron-builder does not support SetBrandingText.
+; Close the running BotsShink app before updating.
+; This prevents Windows/NSIS from showing "Please close the application" during installation.
+!macro customInit
+  DetailPrint "Checking for running BotsShink.exe..."
+  nsExec::ExecToLog 'taskkill /F /IM "BotsShink.exe"'
+  Sleep 1200
+!macroend
+
 
 !macro customInstall
+  ; Close the running app again right before files are written.
+  nsExec::ExecToLog 'taskkill /F /IM "BotsShink.exe"'
+  Sleep 800
+
   ; Marker proves this folder belongs to BotsShink install.
   FileOpen $0 "$INSTDIR\BotsShink.install.marker" w
   FileWrite $0 "BotsShink installer marker.$\r$\n"

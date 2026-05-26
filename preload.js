@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('botPanel', {
   getLogo: () => ipcRenderer.invoke('get-logo'),
   getScripts: () => ipcRenderer.invoke('get-scripts'),
   openScriptsFolder: () => ipcRenderer.invoke('open-scripts-folder'),
+  importScripts: (paths) => ipcRenderer.invoke('import-scripts', paths),
   openLogoFolder: () => ipcRenderer.invoke('open-logo-folder'),
   startBots: (payload) => ipcRenderer.invoke('start-bots', payload),
   stopBots: () => ipcRenderer.invoke('stop-bots'),
@@ -15,6 +16,9 @@ contextBridge.exposeInMainWorld('botPanel', {
   startTelegram: (payload) => ipcRenderer.invoke('telegram-start', payload),
   stopTelegram: () => ipcRenderer.invoke('telegram-stop'),
   getTelegramStatus: () => ipcRenderer.invoke('telegram-status'),
+  startDiscord: (payload) => ipcRenderer.invoke('discord-start', payload),
+  stopDiscord: () => ipcRenderer.invoke('discord-stop'),
+  getDiscordStatus: () => ipcRenderer.invoke('discord-status'),
   getConsoleStatus: () => ipcRenderer.invoke('console-status'),
   runConsoleCommand: (commandText) => ipcRenderer.invoke('console-run-command', commandText),
   checkUpdates: () => ipcRenderer.invoke('check-updates'),
@@ -30,5 +34,6 @@ contextBridge.exposeInMainWorld('botPanel', {
   onPlayersList: (callback) => ipcRenderer.on('players-list', (_event, value) => callback(value)),
   onWindowState: (callback) => ipcRenderer.on('window-state', (_event, value) => callback(value)),
   onTelegramStatus: (callback) => ipcRenderer.on('telegram-status', (_event, value) => callback(value)),
+  onDiscordStatus: (callback) => ipcRenderer.on('discord-status', (_event, value) => callback(value)),
   onConsoleStatus: (callback) => ipcRenderer.on('console-status', (_event, value) => callback(value))
 });

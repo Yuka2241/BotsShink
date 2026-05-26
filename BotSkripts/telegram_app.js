@@ -2,6 +2,7 @@ Seleckt - BotSkripts
 // BotSkripts-Name: ТГ-приложение
 // BotSkripts-Global: true
 // BotSkripts-Pinned: true
+// BotSkripts-NoBotApply: true
 // BotSkripts-CreateTab: Телега
 
 // Этот файл является меткой для BotsShink.

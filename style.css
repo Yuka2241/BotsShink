@@ -2134,3 +2134,628 @@ body.theme-white .settings-gear-button img {
 @media (max-width: 980px) {
   .sidebar-bottom { display: none; }
 }
+
+
+/* v1.34: neutral active navigation, no golden outline */
+button:focus,
+button:focus-visible,
+.tab-button:focus,
+.tab-button:focus-visible,
+.sidebar-toggle:focus,
+.sidebar-toggle:focus-visible,
+.settings-gear-button:focus,
+.settings-gear-button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.tab-button,
+.tab-button:hover,
+.tab-button.active,
+.tab-button.active:hover,
+.nav-group .tab-button.active {
+  border-color: rgba(255,255,255,0.12) !important;
+  box-shadow: none !important;
+}
+
+.tab-button.active {
+  background: rgba(255,255,255,0.095) !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+
+.tab-button.active::before,
+.tab-button.active::after {
+  color: rgba(255,255,255,0.72) !important;
+}
+
+body.theme-white .tab-button.active,
+body.theme-white .tab-button.active:hover,
+body.theme-white .nav-group .tab-button.active {
+  border-color: rgba(17,19,24,0.14) !important;
+  background: rgba(17,19,24,0.075) !important;
+  color: rgba(17,19,24,0.88) !important;
+  box-shadow: none !important;
+}
+
+body.theme-white .tab-button.active::before,
+body.theme-white .tab-button.active::after {
+  color: rgba(17,19,24,0.62) !important;
+}
+
+/* v1.34 professional polish: update window, drag/drop scripts, neutral navigation */
+.update-banner {
+  position: fixed !important;
+  top: 62px;
+  right: 22px;
+  width: min(520px, calc(100vw - 44px));
+  margin: 0 !important;
+  z-index: 80;
+  display: grid !important;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: rgba(9, 10, 12, 0.86) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.34) !important;
+  backdrop-filter: blur(18px) saturate(115%) !important;
+}
+
+.update-banner.hidden {
+  display: none !important;
+}
+
+.update-banner.available,
+.update-banner.neutral,
+.update-banner.error {
+  background: rgba(9, 10, 12, 0.88) !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+
+.update-banner::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.55);
+  position: absolute;
+  left: 16px;
+  top: 20px;
+}
+
+.update-copy {
+  padding-left: 22px;
+}
+
+.update-copy strong {
+  font-size: 14px;
+  letter-spacing: -0.1px;
+}
+
+.update-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.drop-overlay {
+  position: fixed;
+  inset: 46px 0 0 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.38);
+  backdrop-filter: blur(10px);
+}
+
+.drop-overlay.hidden {
+  display: none !important;
+}
+
+.drop-card {
+  width: min(460px, calc(100vw - 40px));
+  border-radius: 26px;
+  padding: 26px;
+  background: rgba(10, 11, 13, 0.92);
+  border: 1px dashed rgba(255,255,255,0.26);
+  box-shadow: 0 22px 70px rgba(0,0,0,0.42);
+  text-align: center;
+}
+
+.drop-card strong {
+  display: block;
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.drop-card p {
+  margin: 0;
+  color: rgba(255,255,255,0.62);
+  line-height: 1.55;
+}
+
+/* Less generated-looking spacing and typography */
+.page-header h2 { letter-spacing: -0.55px; }
+.card { border-radius: 22px; }
+.section-title-row h3, .card h3 { letter-spacing: -0.15px; }
+.hint, .muted, label span { letter-spacing: 0; }
+button { letter-spacing: 0 !important; }
+.primary-button, .secondary-button, .danger-button, .ghost-button {
+  min-height: 42px;
+  border-radius: 15px !important;
+}
+
+/* Keep active navigation neutral: no gold outline, no yellow focus ring */
+.tab-button,
+.tab-button:hover,
+.tab-button:focus,
+.tab-button:focus-visible,
+.tab-button.active,
+.tab-button.active:hover,
+.nav-group .tab-button.active {
+  outline: none !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  box-shadow: none !important;
+}
+
+.tab-button.active {
+  background: rgba(255,255,255,0.092) !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+
+.tab-button.active::before,
+.tab-button.active::after,
+.nav-dot {
+  color: rgba(255,255,255,0.66) !important;
+}
+
+.terminal-output {
+  min-height: 240px;
+  white-space: pre-wrap;
+}
+
+body.theme-white .update-banner,
+body.theme-white .drop-card {
+  background: rgba(255,255,255,0.94) !important;
+  border-color: rgba(17,19,24,0.12) !important;
+  color: rgba(17,19,24,0.92) !important;
+}
+
+body.theme-white .update-copy p,
+body.theme-white .drop-card p {
+  color: rgba(17,19,24,0.60) !important;
+}
+
+body.theme-white .drop-overlay {
+  background: rgba(244,245,247,0.52) !important;
+}
+
+/* v1.34 final: instruction, discord, console sections, softer themes */
+.scripts-guide-card.hidden,
+#discordTabButton.hidden,
+.console-section-output,
+.customize-controls.hidden { display: none !important; }
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.guide-grid h4 { margin: 0 0 8px; }
+.guide-grid .code-box { min-height: 88px; }
+
+.console-section-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 0;
+}
+
+.console-section-tab {
+  min-height: 34px;
+  padding: 8px 13px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.045);
+  color: rgba(255,255,255,0.58);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.console-section-tab.active {
+  color: var(--text);
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.16);
+}
+
+.console-section-output.active { display: block !important; }
+
+.command-help-grid + #consoleClearBtn,
+#consoleClearBtn {
+  margin-top: 18px;
+  display: inline-flex;
+}
+
+.discord-card .settings-option,
+.customize-controls {
+  margin-bottom: 16px;
+}
+
+.customize-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.035);
+}
+
+body[data-customize-mode="buttons"] .primary-button,
+body[data-customize-mode="buttons"] .secondary-button,
+body[data-customize-mode="buttons"] .danger-button,
+body[data-customize-mode="buttons"] .ghost-button,
+body[data-customize-mode="buttons"] .tab-button:not(.settings-gear-button),
+body[data-customize-mode="buttons"] .settings-toggle,
+body[data-customize-mode="buttons"] .toggle-symbol,
+body[data-customize-mode="buttons"] .symbol-button {
+  background: color-mix(in srgb, var(--custom-color) calc(var(--custom-opacity) * 100%), transparent) !important;
+  border-color: color-mix(in srgb, var(--custom-color) 40%, rgba(255,255,255,.12)) !important;
+}
+
+body[data-customize-mode="appearance"] .card,
+body[data-customize-mode="appearance"] .sidebar,
+body[data-customize-mode="appearance"] .status-item,
+body[data-customize-mode="appearance"] .script-item,
+body[data-customize-mode="appearance"] .bot-card,
+body[data-customize-mode="appearance"] .stat-box,
+body[data-customize-mode="appearance"] .code-box {
+  background: color-mix(in srgb, var(--custom-color) calc(var(--custom-opacity) * 72%), rgba(0,0,0,.42)) !important;
+  border-color: color-mix(in srgb, var(--custom-color) 36%, rgba(255,255,255,.10)) !important;
+}
+
+:root {
+  --panel-alpha: .48;
+}
+
+.card,
+.sidebar-card,
+.status-item,
+.script-item,
+.bot-card,
+.bot-row,
+.stat-box,
+.code-box,
+#consoleOutput,
+#consoleLogsOutput {
+  background-color: rgba(0,0,0,var(--panel-alpha)) !important;
+}
+
+.theme-white {
+  --bg: #d7d9dc;
+  --panel: rgba(235,237,240,.68);
+  --text: #14161a;
+  --muted: rgba(20,22,26,.58);
+  color: var(--text);
+  background: #d7d9dc !important;
+}
+
+.theme-white::before { opacity: .22 !important; }
+.theme-white::after {
+  background: linear-gradient(90deg, rgba(215,217,220,.1), rgba(215,217,220,.35), rgba(215,217,220,.72)) !important;
+}
+.theme-white .card,
+.theme-white .sidebar,
+.theme-white .status-item,
+.theme-white .script-item,
+.theme-white .bot-card,
+.theme-white .stat-box,
+.theme-white .code-box {
+  background-color: rgba(238,240,243,var(--panel-alpha)) !important;
+  color: var(--text) !important;
+  border-color: rgba(0,0,0,.10) !important;
+}
+.theme-white input,
+.theme-white select,
+.theme-white textarea {
+  background: rgba(255,255,255,.58) !important;
+  color: #17191d !important;
+  border-color: rgba(0,0,0,.12) !important;
+}
+.theme-white .hint,
+.theme-white .muted,
+.theme-white label span { color: rgba(20,22,26,.60) !important; }
+.theme-white .tab-button { color: rgba(20,22,26,.62) !important; }
+.theme-white .tab-button.active { background: rgba(0,0,0,.08) !important; color: #111 !important; }
+
+body::before {
+  animation: botsshinkDotsTravel 70s linear infinite !important;
+  background-position: 0 0;
+}
+
+@keyframes botsshinkDotsTravel {
+  0% { transform: translate3d(-18px, -18px, 0) scale(1.01); }
+  25% { transform: translate3d(28px, 18px, 0) scale(1.02); }
+  50% { transform: translate3d(54px, 44px, 0) scale(1.01); }
+  75% { transform: translate3d(18px, 70px, 0) scale(1.02); }
+  100% { transform: translate3d(-18px, 102px, 0) scale(1.01); }
+}
+
+body[data-dot-speed="slow"]::before { animation-duration: 110s !important; }
+body[data-dot-speed="normal"]::before { animation-duration: 70s !important; }
+body[data-dot-speed="fast"]::before { animation-duration: 36s !important; }
+
+@media (max-width: 980px) {
+  .guide-grid { grid-template-columns: 1fr; }
+  .customize-controls { grid-template-columns: 1fr; }
+}
+
+/* v1.34 hotfix: Discord mode UI and Console visibility */
+.discord-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.discord-field.hidden,
+.discord-webhook-field.hidden,
+.discord-bot-field.hidden {
+  display: none !important;
+}
+
+.discord-mode-switch {
+  padding: 15px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+}
+
+.discord-mode-note {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.discord-feature-row,
+.telegram-feature-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+}
+
+.discord-feature-row + .discord-feature-row,
+.telegram-feature-row + .telegram-feature-row {
+  margin-top: 10px;
+}
+
+.discord-feature-row p,
+.telegram-feature-row p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.discord-feature-toggle,
+.telegram-feature-toggle {
+  min-width: 74px;
+  min-height: 38px;
+  border-radius: 13px;
+  padding: 8px 13px;
+  color: rgba(255,255,255,0.66);
+  background: rgba(255,255,255,0.045);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.discord-feature-toggle.active,
+.telegram-feature-toggle.active,
+.discord-feature-row.active .discord-feature-toggle,
+.telegram-feature-row.active .telegram-feature-toggle {
+  color: #fff;
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.18);
+}
+
+.console-panel .terminal-output {
+  display: none;
+}
+
+.console-panel .terminal-output.active,
+.console-section-output.active {
+  display: block !important;
+  min-height: 260px;
+}
+
+.console-terminal-card {
+  min-height: 380px;
+}
+
+body.theme-white .discord-mode-note,
+body.theme-white .discord-mode-switch,
+body.theme-white .discord-feature-row,
+body.theme-white .telegram-feature-row {
+  background: rgba(255,255,255,0.46) !important;
+  border-color: rgba(0,0,0,0.10) !important;
+}
+
+body.theme-white .discord-feature-toggle,
+body.theme-white .telegram-feature-toggle {
+  color: rgba(20,22,26,0.66) !important;
+  background: rgba(20,22,26,0.06) !important;
+  border-color: rgba(20,22,26,0.12) !important;
+}
+
+body.theme-white .discord-feature-toggle.active,
+body.theme-white .telegram-feature-toggle.active,
+body.theme-white .discord-feature-row.active .discord-feature-toggle,
+body.theme-white .telegram-feature-row.active .telegram-feature-toggle {
+  color: #111318 !important;
+  background: rgba(20,22,26,0.14) !important;
+}
+
+/* v1.34 FIXED3: remove active tab star and keep settings gear neutral */
+.tab-button.active::before,
+.tab-button.active::after,
+.nav-group .tab-button.active::before,
+.nav-group .tab-button.active::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.settings-gear-button,
+.settings-gear-button:hover,
+.settings-gear-button.active,
+.settings-gear-button.active:hover,
+.settings-gear-button:focus,
+.settings-gear-button:focus-visible {
+  width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  padding: 0 !important;
+  border-radius: 14px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: rgba(255,255,255,.045) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.settings-gear-button::before,
+.settings-gear-button::after,
+.settings-gear-button.active::before,
+.settings-gear-button.active::after {
+  content: none !important;
+  display: none !important;
+}
+
+.settings-gear-button img,
+.settings-gear-button.active img,
+.settings-gear-button:hover img {
+  width: 26px !important;
+  height: 26px !important;
+  opacity: .86 !important;
+  filter: invert(1) !important;
+  transform: none !important;
+}
+
+.settings-gear-button:hover {
+  background: rgba(255,255,255,.075) !important;
+  border-color: rgba(255,255,255,.14) !important;
+}
+
+body.theme-white .settings-gear-button,
+body.theme-white .settings-gear-button:hover,
+body.theme-white .settings-gear-button.active,
+body.theme-white .settings-gear-button.active:hover {
+  background: rgba(17,19,24,.055) !important;
+  border-color: rgba(17,19,24,.10) !important;
+  box-shadow: none !important;
+}
+
+body.theme-white .settings-gear-button img,
+body.theme-white .settings-gear-button.active img,
+body.theme-white .settings-gear-button:hover img {
+  filter: none !important;
+  opacity: .72 !important;
+}
+
+/* v1.34 FIXED5: default sidebar buttons match matte dark reference */
+:root {
+  --nav-button-bg: rgba(3, 3, 4, 0.78);
+  --nav-button-bg-hover: rgba(16, 16, 18, 0.78);
+  --nav-button-bg-active: rgba(12, 12, 13, 0.88);
+  --nav-button-border: rgba(255,255,255,0.075);
+  --nav-button-border-active: rgba(255,255,255,0.11);
+  --nav-button-text: rgba(255,255,255,0.36);
+  --nav-button-text-active: rgba(255,255,255,0.92);
+}
+
+.tab-button,
+.nav-group .tab-button,
+body.theme-matte .tab-button {
+  min-height: 49px !important;
+  padding: 0 14px !important;
+  border-radius: 16px !important;
+  background: var(--nav-button-bg) !important;
+  border: 1px solid var(--nav-button-border) !important;
+  color: var(--nav-button-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.018) !important;
+  opacity: 1 !important;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease !important;
+}
+
+.tab-button:hover,
+.nav-group .tab-button:hover,
+body.theme-matte .tab-button:hover {
+  background: var(--nav-button-bg-hover) !important;
+  border-color: rgba(255,255,255,0.095) !important;
+  color: rgba(255,255,255,0.64) !important;
+  transform: none !important;
+}
+
+.tab-button.active,
+.tab-button.active:hover,
+.nav-group .tab-button.active,
+body.theme-matte .tab-button.active {
+  background: var(--nav-button-bg-active) !important;
+  border-color: var(--nav-button-border-active) !important;
+  color: var(--nav-button-text-active) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025) !important;
+}
+
+.tab-button.active::before,
+.tab-button.active::after,
+.nav-group .tab-button.active::before,
+.nav-group .tab-button.active::after {
+  display: none !important;
+  content: none !important;
+}
+
+.nav-dot {
+  width: 6px !important;
+  height: 6px !important;
+  background: rgba(255,255,255,0.16) !important;
+}
+
+.tab-button.active .nav-dot {
+  background: rgba(255,255,255,0.88) !important;
+}
+
+body.theme-white .tab-button,
+body.theme-white .nav-group .tab-button {
+  background: rgba(232,234,237,0.72) !important;
+  border-color: rgba(17,19,24,0.085) !important;
+  color: rgba(17,19,24,0.42) !important;
+}
+
+body.theme-white .tab-button:hover,
+body.theme-white .nav-group .tab-button:hover {
+  background: rgba(224,226,230,0.84) !important;
+  color: rgba(17,19,24,0.66) !important;
+}
+
+body.theme-white .tab-button.active,
+body.theme-white .tab-button.active:hover,
+body.theme-white .nav-group .tab-button.active {
+  background: rgba(214,217,222,0.90) !important;
+  border-color: rgba(17,19,24,0.13) !important;
+  color: rgba(17,19,24,0.90) !important;
+}
+
+body.theme-white .nav-dot {
+  background: rgba(17,19,24,0.18) !important;
+}
+
+body.theme-white .tab-button.active .nav-dot {
+  background: rgba(17,19,24,0.78) !important;
+}

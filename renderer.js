@@ -19,9 +19,24 @@ const state = {
       playersOnline: false
     }
   }),
+  discord: loadJson('discordSettings', {
+    scriptEnabled: false,
+    useBot: true,
+    token: '',
+    webhook: '',
+    guildId: '',
+    channelId: '',
+    features: {
+      botNotifications: false,
+      chatNotifications: false,
+      serverOnline: false,
+      playersOnline: false
+    }
+  }),
   consoleApp: loadJson('consoleSettings', {
     scriptEnabled: false,
-    history: []
+    history: [],
+    logs: []
   }),
   ui: loadJson('uiSettings', {
     theme: 'matte',
@@ -30,7 +45,10 @@ const state = {
     compact: false,
     panelOpacity: 48,
     dotSpeed: 'normal',
-    uiScale: 'normal'
+    uiScale: 'normal',
+    customizeMode: 'none',
+    customColor: '#ffffff',
+    customOpacity: 65
   }),
   navGroups: loadJson('navGroups', {
     integrations: true,
@@ -87,9 +105,37 @@ function showToast(message) {
 }
 
 function addLog(line) {
-  const output = $('logOutput');
-  output.textContent += `${line}\n`;
-  output.scrollTop = output.scrollHeight;
+  const text = String(line || '').trim();
+  if (!text) return;
+  const logs = state.consoleApp.logs || [];
+  if (logs[logs.length - 1] !== text) logs.push(text);
+  state.consoleApp.logs = logs.slice(-500);
+  saveConsoleSettings();
+  renderConsoleLogs();
+  addConsoleNotification(text);
+}
+
+function smartConsoleAdvice(text) {
+  const value = String(text || '').toLowerCase();
+  if (value.includes('econnrefused')) return 'Совет: сервер не принимает подключение. Проверь IP, порт и включён ли сервер.';
+  if (value.includes('connection throttled')) return 'Совет: сервер ограничивает частые входы. Увеличь задержку между входами.';
+  if (value.includes('invalid') && value.includes('ник')) return 'Совет: ник должен быть 3–16 символов, только английские буквы, цифры или _.';
+  if (value.includes('no space left') || value.includes('enospc')) return 'Совет: на диске мало места. Освободи 5–10 ГБ и повтори действие.';
+  if (value.includes('telegram') && value.includes('ошибка')) return 'Совет: проверь токен Telegram-бота, Chat ID и доступ к интернету.';
+  return '';
+}
+
+function addConsoleNotification(line) {
+  const text = String(line || '').trim();
+  if (!text) return;
+  const history = state.consoleApp.history || [];
+  const next = [...history];
+  if (next[next.length - 1] !== text) next.push(text);
+  const advice = smartConsoleAdvice(text);
+  if (advice && next[next.length - 1] !== advice) next.push(advice);
+  state.consoleApp.history = next.slice(-300);
+  saveConsoleSettings();
+  renderConsoleHistory();
 }
 
 function syncBotsFromRows() {
@@ -210,7 +256,7 @@ function renderHomeStatuses() {
 
 function renderBotCards() {
   const container = $('botCards');
-  const validScripts = state.scripts.filter((script) => script.valid);
+  const validScripts = state.scripts.filter((script) => script.valid && !(script.isGlobal || script.isPinned || script.createTab || script.noBotApply));
   const botNames = state.bots.map((b) => b.nick.trim()).filter(Boolean);
 
   if (!botNames.length) {
@@ -328,6 +374,13 @@ function isConsoleScript(script) {
   return tab === 'консоль' || tab === 'console' || name.includes('консоль') || name.includes('console') || file.includes('console');
 }
 
+function isDiscordScript(script) {
+  const tab = String(script.createTab || '').trim().toLowerCase();
+  const name = String(script.displayName || '').trim().toLowerCase();
+  const file = String(script.fileName || '').trim().toLowerCase();
+  return tab === 'дискорд' || tab === 'discord' || name.includes('дискорд') || name.includes('discord') || file.includes('discord');
+}
+
 function renderScriptList() {
   const validScripts = state.scripts.filter((script) => script.valid);
   const pinnedScripts = validScripts.filter((script) => script.isPinned || script.isGlobal || script.createTab);
@@ -338,7 +391,7 @@ function renderScriptList() {
   container.className = 'script-list';
 
   const pinnedHtml = pinnedScripts.length ? pinnedScripts.map((script, index) => {
-    const enabled = isTelegramScript(script) ? !!state.telegram.scriptEnabled : (isConsoleScript(script) ? !!state.consoleApp.scriptEnabled : false);
+    const enabled = isTelegramScript(script) ? !!state.telegram.scriptEnabled : (isConsoleScript(script) ? !!state.consoleApp.scriptEnabled : (isDiscordScript(script) ? !!state.discord.scriptEnabled : false));
     const tabText = script.createTab ? ` · вкладка: ${escapeHtml(script.createTab)}` : '';
     return `
       <div class="script-item pinned-script">
@@ -381,7 +434,14 @@ function renderScriptList() {
         state.consoleApp.scriptEnabled = true;
         saveConsoleSettings();
         await window.botPanel.setGlobalScript({ scriptName: 'console-app', enabled: true });
+        addConsoleLine('Консоль включена. Системные уведомления уже сохранены в истории.');
         updateConsoleVisibility();
+        renderScriptList();
+      } else if (isDiscordScript(script)) {
+        state.discord.scriptEnabled = true;
+        saveDiscordSettings();
+        await window.botPanel.setGlobalScript({ scriptName: 'discord-app', enabled: true });
+        updateDiscordVisibility();
         renderScriptList();
       } else {
         showToast('Этот общий скрипт требует отдельного обработчика в приложении.');
@@ -402,7 +462,14 @@ function renderScriptList() {
         state.consoleApp.scriptEnabled = false;
         saveConsoleSettings();
         await window.botPanel.setGlobalScript({ scriptName: 'console-app', enabled: false });
+        addConsoleLine('Консоль выключена. Уведомления продолжат сохраняться в истории.');
         updateConsoleVisibility();
+        renderScriptList();
+      } else if (isDiscordScript(script)) {
+        state.discord.scriptEnabled = false;
+        saveDiscordSettings();
+        await window.botPanel.setGlobalScript({ scriptName: 'discord-app', enabled: false });
+        updateDiscordVisibility();
         renderScriptList();
       }
     });
@@ -415,6 +482,10 @@ function saveTelegramSettings() {
   saveJson('telegramSettings', state.telegram);
 }
 
+function saveDiscordSettings() {
+  saveJson('discordSettings', state.discord);
+}
+
 function updateTelegramVisibility() {
   const button = $('telegramTabButton');
   const panel = $('telegram');
@@ -423,8 +494,7 @@ function updateTelegramVisibility() {
   button.classList.toggle('hidden', !visible);
   if (visible && state.navGroups.integrations === false) { state.navGroups.integrations = true; saveNavGroups(); applyNavGroupState(); }
   if (!visible && panel.classList.contains('active')) {
-    const homeBtn = document.querySelector('.tab-button[data-tab="home"]');
-    if (homeBtn) homeBtn.click();
+    activateTab('home');
   }
 }
 
@@ -440,10 +510,29 @@ function updateConsoleVisibility() {
   button.classList.toggle('hidden', !visible);
   if (visible && state.navGroups.tools === false) { state.navGroups.tools = true; saveNavGroups(); applyNavGroupState(); }
   if (!visible && panel.classList.contains('active')) {
-    const homeBtn = document.querySelector('.tab-button[data-tab="home"]');
-    if (homeBtn) homeBtn.click();
+    activateTab('home');
   }
   setConsoleStatus({ scriptEnabled: visible });
+  renderConsoleHistory();
+  renderConsoleLogs();
+}
+
+
+function updateDiscordVisibility() {
+  const button = $('discordTabButton');
+  const panel = $('discord');
+  if (!button || !panel) return;
+  const visible = !!state.discord.scriptEnabled;
+  button.classList.toggle('hidden', !visible);
+  if (visible && state.navGroups.integrations === false) {
+    state.navGroups.integrations = true;
+    saveNavGroups();
+    applyNavGroupState();
+  }
+  if (!visible && panel.classList.contains('active')) {
+    activateTab('home');
+  }
+  setDiscordStatus({ scriptEnabled: visible, running: false, features: state.discord.features });
 }
 
 function addConsoleLine(line) {
@@ -451,7 +540,7 @@ function addConsoleLine(line) {
   if (!output) return;
   const stamp = new Date().toLocaleTimeString('ru-RU', { hour12: false });
   const text = `[${stamp}] ${line}`;
-  state.consoleApp.history = [...(state.consoleApp.history || []), text].slice(-200);
+  state.consoleApp.history = [...(state.consoleApp.history || []), text].slice(-300);
   saveConsoleSettings();
   output.textContent = state.consoleApp.history.join('\n');
   output.scrollTop = output.scrollHeight;
@@ -460,7 +549,16 @@ function addConsoleLine(line) {
 function renderConsoleHistory() {
   const output = $('consoleOutput');
   if (!output) return;
-  output.textContent = (state.consoleApp.history || []).join('\n');
+  const lines = state.consoleApp.history || [];
+  output.textContent = lines.length ? lines.join('\n') : 'Консоль готова. Включи скрипт “Консоль” во вкладке “Скрипты”, затем используй команды: help, bots, say "ник" "сообщение".';
+  output.scrollTop = output.scrollHeight;
+}
+
+function renderConsoleLogs() {
+  const output = $('consoleLogsOutput');
+  if (!output) return;
+  const lines = state.consoleApp.logs || [];
+  output.textContent = lines.length ? lines.join('\n') : 'Логи пока пустые. Системные уведомления будут появляться здесь автоматически.';
   output.scrollTop = output.scrollHeight;
 }
 
@@ -542,6 +640,96 @@ async function stopTelegram() {
   setTelegramStatus(status);
 }
 
+
+function updateDiscordModeFields() {
+  const useBot = state.discord.useBot !== false;
+  document.querySelectorAll('.discord-bot-field').forEach((el) => el.classList.toggle('hidden', !useBot));
+  document.querySelectorAll('.discord-webhook-field').forEach((el) => el.classList.toggle('hidden', useBot));
+  const note = $('discordModeNote');
+  if (note) {
+    note.textContent = useBot
+      ? 'Режим бота: введи токен Discord-бота, ID сервера и ID канала. Webhook в этом режиме скрыт и не используется.'
+      : 'Режим Webhook: введи Webhook канала и ID сервера. Токен бота и ID канала скрыты и не используются.';
+  }
+  const hint = $('discordModeHint');
+  if (hint) {
+    hint.textContent = useBot
+      ? 'Сейчас включён режим Discord-бота. Он пишет в канал через Bot Token.'
+      : 'Сейчас включён режим Webhook. Он пишет в канал через Webhook без токена бота.';
+  }
+  const modeButton = $('discordBotModeToggle');
+  if (modeButton) {
+    modeButton.classList.toggle('active', useBot);
+    modeButton.textContent = useBot ? 'Вкл' : 'Выкл';
+  }
+}
+
+function renderDiscordSettings() {
+  const d = state.discord || {};
+  const ids = {
+    discordTokenInput: d.token || '',
+    discordWebhookInput: d.webhook || '',
+    discordGuildIdInput: d.guildId || '',
+    discordChannelIdInput: d.channelId || ''
+  };
+  for (const [id, value] of Object.entries(ids)) {
+    const input = $(id);
+    if (input) input.value = value;
+  }
+  updateDiscordModeFields();
+  document.querySelectorAll('.discord-feature-row').forEach((row) => {
+    const key = row.dataset.feature;
+    const active = !!(state.discord.features && state.discord.features[key]);
+    const btn = row.querySelector('.discord-feature-toggle');
+    setToggleButton(btn, active);
+  });
+  updateDiscordVisibility();
+}
+
+function collectDiscordSettings() {
+  state.discord.token = ($('discordTokenInput')?.value || '').trim();
+  state.discord.webhook = ($('discordWebhookInput')?.value || '').trim();
+  state.discord.guildId = ($('discordGuildIdInput')?.value || '').trim();
+  state.discord.channelId = ($('discordChannelIdInput')?.value || '').trim();
+  saveDiscordSettings();
+  return {
+    useBot: state.discord.useBot !== false,
+    token: state.discord.token,
+    webhook: state.discord.webhook,
+    guildId: state.discord.guildId,
+    channelId: state.discord.channelId,
+    features: state.discord.features
+  };
+}
+
+function setDiscordStatus(status) {
+  const badge = $('discordStatusBadge');
+  if (!badge) return;
+  if (status && status.running) badge.textContent = 'Запущено';
+  else if (state.discord.scriptEnabled) badge.textContent = 'Готово';
+  else badge.textContent = 'Остановлено';
+  if (status && status.features) {
+    state.discord.features = { ...state.discord.features, ...status.features };
+    saveDiscordSettings();
+    renderDiscordSettings();
+  }
+}
+
+async function startDiscord() {
+  const result = await window.botPanel.startDiscord(collectDiscordSettings());
+  if (result && result.message) addLog(`UI: ${result.message}`);
+  if (result && result.ok === false) showToast(result.message || 'Discord не запущен.');
+  const status = await window.botPanel.getDiscordStatus();
+  setDiscordStatus(status);
+}
+
+async function stopDiscord() {
+  const result = await window.botPanel.stopDiscord();
+  if (result && result.message) addLog(`UI: ${result.message}`);
+  const status = await window.botPanel.getDiscordStatus();
+  setDiscordStatus(status);
+}
+
 function refreshCounts() {
   const online = state.statuses.filter((item) => item.status === 'online').length;
   const total = new Set([...state.bots.map((b) => b.nick).filter(Boolean), ...state.statuses.map((s) => s.username)]).size;
@@ -608,15 +796,26 @@ function applyUiSettings() {
   document.body.classList.toggle('ui-large', ui.uiScale === 'large');
   document.body.dataset.dotSpeed = ui.dotSpeed || 'normal';
   document.documentElement.style.setProperty('--panel-alpha', `${Math.max(35, Math.min(95, Number(ui.panelOpacity || 48))) / 100}`);
+  document.documentElement.style.setProperty('--custom-color', ui.customColor || '#ffffff');
+  document.documentElement.style.setProperty('--custom-opacity', `${Math.max(20, Math.min(100, Number(ui.customOpacity || 65))) / 100}`);
+  document.body.dataset.customizeMode = ui.customizeMode || 'none';
 
   const themeSelect = $('themeSelect');
   const panelOpacity = $('panelOpacityInput');
   const dotSpeed = $('dotSpeedSelect');
   const uiScale = $('uiScaleSelect');
+  const customizeMode = $('customizeModeSelect');
+  const customColor = $('customColorInput');
+  const customOpacity = $('customOpacityInput');
   if (themeSelect) themeSelect.value = ui.theme || 'matte';
   if (panelOpacity) panelOpacity.value = String(ui.panelOpacity || 48);
   if (dotSpeed) dotSpeed.value = ui.dotSpeed || 'normal';
   if (uiScale) uiScale.value = ui.uiScale || 'normal';
+  if (customizeMode) customizeMode.value = ui.customizeMode || 'none';
+  if (customColor) customColor.value = ui.customColor || '#ffffff';
+  if (customOpacity) customOpacity.value = String(ui.customOpacity || 65);
+  const controls = $('customizeControls');
+  if (controls) controls.classList.toggle('hidden', (ui.customizeMode || 'none') === 'none');
   setToggleButton($('blurToggle'), !!ui.blur);
   setToggleButton($('dotsToggle'), ui.dots !== false);
   setToggleButton($('compactToggle'), !!ui.compact);
@@ -645,6 +844,9 @@ function initSettingsEvents() {
   });
 
   const uiScale = $('uiScaleSelect');
+  const customizeMode = $('customizeModeSelect');
+  const customColor = $('customColorInput');
+  const customOpacity = $('customOpacityInput');
   if (uiScale) uiScale.addEventListener('change', () => {
     state.ui.uiScale = uiScale.value;
     saveUiSettings();
@@ -668,9 +870,27 @@ function initSettingsEvents() {
     saveUiSettings();
     applyUiSettings();
   });
+  if (customizeMode) customizeMode.addEventListener('change', () => {
+    state.ui.customizeMode = customizeMode.value || 'none';
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  if (customColor) customColor.addEventListener('input', () => {
+    state.ui.customColor = customColor.value || '#ffffff';
+    saveUiSettings();
+    applyUiSettings();
+  });
+
+  if (customOpacity) customOpacity.addEventListener('input', () => {
+    state.ui.customOpacity = Number(customOpacity.value || 65);
+    saveUiSettings();
+    applyUiSettings();
+  });
+
 
   bindClick('settingsResetBtn', () => {
-    state.ui = { theme: 'matte', blur: false, dots: true, compact: false, panelOpacity: 48, dotSpeed: 'normal', uiScale: 'normal' };
+    state.ui = { theme: 'matte', blur: false, dots: true, compact: false, panelOpacity: 48, dotSpeed: 'normal', uiScale: 'normal', customizeMode: 'none', customColor: '#ffffff', customOpacity: 65 };
     saveUiSettings();
     applyUiSettings();
     showToast('Настройки интерфейса сброшены.');
@@ -723,13 +943,23 @@ function toggleSidebar() {
   applySidebarState();
 }
 
+function activateTab(tabId) {
+  const panel = $(tabId);
+  if (!panel) return;
+  document.querySelectorAll('.tab-button').forEach((b) => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+  panel.classList.add('active');
+  const button = document.querySelector(`.tab-button[data-tab="${CSS.escape(tabId)}"]`);
+  if (button) button.classList.add('active');
+  saveJson('lastActiveTab', tabId);
+}
+
 function initTabs() {
-  document.querySelectorAll('.tab-button').forEach((button) => {
+  document.querySelectorAll('.tab-button[data-tab]').forEach((button) => {
     button.addEventListener('click', () => {
-      document.querySelectorAll('.tab-button').forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.remove('active'));
-      button.classList.add('active');
-      $(button.dataset.tab).classList.add('active');
+      const target = button.dataset.tab;
+      if (!target) return;
+      activateTab(target);
     });
   });
 }
@@ -827,17 +1057,105 @@ function bindClick(id, handler) {
   if (el) el.addEventListener('click', handler);
 }
 
+
+function initScriptDragDrop() {
+  const overlay = $('dropOverlay');
+  let dragDepth = 0;
+
+  function showOverlay() {
+    if (overlay) overlay.classList.remove('hidden');
+  }
+
+  function hideOverlay() {
+    if (overlay) overlay.classList.add('hidden');
+  }
+
+  function hasFiles(event) {
+    return event.dataTransfer && Array.from(event.dataTransfer.types || []).includes('Files');
+  }
+
+  window.addEventListener('dragenter', (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    showOverlay();
+  });
+
+  window.addEventListener('dragover', (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    showOverlay();
+  });
+
+  window.addEventListener('dragleave', (event) => {
+    if (!hasFiles(event)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) hideOverlay();
+  });
+
+  window.addEventListener('drop', async (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth = 0;
+    hideOverlay();
+
+    const files = Array.from(event.dataTransfer.files || []);
+    const paths = files.map((file) => file.path).filter(Boolean);
+    if (!paths.length) {
+      showToast('Не удалось получить путь к файлу. Используй кнопку Загрузить.');
+      addLog('UI ERROR: не удалось получить путь к перетаскиваемому файлу.');
+      return;
+    }
+
+    const result = await window.botPanel.importScripts(paths);
+    const imported = result && result.imported ? result.imported : [];
+    const skipped = result && result.skipped ? result.skipped : [];
+
+    if (imported.length) {
+      state.scripts = await window.botPanel.getScripts();
+      renderScriptList();
+      showToast(`Скрипт добавлен: ${imported.join(', ')}`);
+      addLog(`UI: импортировано скриптов: ${imported.join(', ')}`);
+    }
+    if (skipped.length) {
+      showToast('Некоторые файлы пропущены. Подробности в логах.');
+      addLog(`UI: импорт пропущен: ${skipped.join('; ')}`);
+    }
+  });
+}
+
 function initEvents() {
   for (const id of ['startBtn', 'startBtn2']) $(id).addEventListener('click', startBots);
   $('sidebarToggleBtn').addEventListener('click', toggleSidebar);
   $('checkUpdateBtn').addEventListener('click', () => checkUpdates(true));
   bindClick('telegramStartBtn', startTelegram);
   bindClick('telegramStopBtn', stopTelegram);
+  bindClick('discordStartBtn', startDiscord);
+  bindClick('discordStopBtn', stopDiscord);
+  bindClick('scriptsGuideBtn', () => $('scriptsGuideCard')?.classList.toggle('hidden'));
+  bindClick('scriptsGuideCloseBtn', () => $('scriptsGuideCard')?.classList.add('hidden'));
   bindClick('consoleRunBtn', runConsoleCommand);
   bindClick('consoleClearBtn', () => {
-    state.consoleApp.history = [];
+    const active = document.querySelector('.console-section-tab.active')?.dataset.consoleSection || 'general';
+    if (active === 'logs') {
+      state.consoleApp.logs = [];
+      renderConsoleLogs();
+    } else {
+      state.consoleApp.history = [];
+      renderConsoleHistory();
+    }
     saveConsoleSettings();
-    renderConsoleHistory();
+  });
+  document.querySelectorAll('.console-section-tab').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.console-section-tab').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.console-section-output').forEach((o) => o.classList.remove('active'));
+      button.classList.add('active');
+      const output = document.querySelector(`[data-console-output="${button.dataset.consoleSection}"]`);
+      if (output) output.classList.add('active');
+      renderConsoleHistory();
+      renderConsoleLogs();
+    });
   });
   const consoleCommandInput = $('consoleCommandInput');
   if (consoleCommandInput) {
@@ -853,6 +1171,28 @@ function initEvents() {
       input.focus();
     });
   });
+
+  document.querySelectorAll('.discord-feature-toggle').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest('.discord-feature-row');
+      if (!row) return;
+      const key = row.dataset.feature;
+      state.discord.features[key] = !state.discord.features[key];
+      saveDiscordSettings();
+      renderDiscordSettings();
+    });
+  });
+  bindClick('discordBotModeToggle', () => {
+    state.discord.useBot = state.discord.useBot === false;
+    saveDiscordSettings();
+    renderDiscordSettings();
+  });
+  for (const id of ['discordTokenInput', 'discordWebhookInput', 'discordGuildIdInput', 'discordChannelIdInput']) {
+    const input = $(id);
+    if (input) input.addEventListener('input', () => {
+      collectDiscordSettings();
+    });
+  }
 
   document.querySelectorAll('.telegram-feature-toggle').forEach((button) => {
     button.addEventListener('click', () => {
@@ -916,6 +1256,7 @@ async function restoreSaved() {
     $('hostInput').value = cfg.host || '127.0.0.1';
     $('portInput').value = cfg.port || 25565;
     $('versionInput').value = cfg.version || 'auto';
+    if (!$('versionInput').value) $('versionInput').value = 'auto';
     $('delayInput').value = cfg.delaySeconds || 15;
   }
 
@@ -963,6 +1304,7 @@ function initIpc() {
   });
   window.botPanel.onWindowState(updateWindowState);
   window.botPanel.onTelegramStatus(setTelegramStatus);
+  window.botPanel.onDiscordStatus(setDiscordStatus);
   window.botPanel.onConsoleStatus((status) => {
     if (status && typeof status.scriptEnabled === 'boolean') {
       state.consoleApp.scriptEnabled = status.scriptEnabled;
@@ -978,6 +1320,7 @@ function initIpc() {
   initNavGroups();
   initWindowControls();
   initEvents();
+  initScriptDragDrop();
   initSettingsEvents();
   initIpc();
   await restoreSaved();
@@ -987,10 +1330,14 @@ function initIpc() {
   renderBotRows();
   renderScriptList();
   renderTelegramSettings();
+  renderDiscordSettings();
   renderConsoleHistory();
+  renderConsoleLogs();
   updateConsoleVisibility();
+  updateDiscordVisibility();
   await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: !!state.telegram.scriptEnabled });
   await window.botPanel.setGlobalScript({ scriptName: 'console-app', enabled: !!state.consoleApp.scriptEnabled });
+  await window.botPanel.setGlobalScript({ scriptName: 'discord-app', enabled: !!state.discord.scriptEnabled });
   renderHomeStatuses();
   refreshCounts();
   setTimeout(() => checkUpdates(false), 1500);

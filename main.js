@@ -56,6 +56,8 @@ const TELEGRAM_FEATURE_LABELS = {
   playersOnline: 'Игроки на сервере'
 };
 
+const DISCORD_FEATURE_LABELS = { ...TELEGRAM_FEATURE_LABELS };
+
 const telegramState = {
   scriptEnabled: false,
   running: false,
@@ -65,6 +67,22 @@ const telegramState = {
   pollTimer: null,
   lastPlayersText: '',
   lastPlayersAt: 0,
+  features: {
+    botNotifications: false,
+    chatNotifications: false,
+    serverOnline: false,
+    playersOnline: false
+  }
+};
+
+const discordState = {
+  scriptEnabled: false,
+  running: false,
+  useBot: true,
+  token: '',
+  webhook: '',
+  guildId: '',
+  channelId: '',
   features: {
     botNotifications: false,
     chatNotifications: false,
@@ -157,6 +175,10 @@ function stamp() {
 
 function log(message) {
   send('log', `[${stamp()}] ${message}`);
+  const text = String(message || '');
+  if (discordState && discordState.running && discordState.features && discordState.features.botNotifications && /(вошёл|соединение закрыто|кикнут|ошибка|подключение началось|отправлена команда выхода)/i.test(text)) {
+    discordSend(`BotsShink: ${text}`).catch(() => {});
+  }
 }
 
 function uiError(message) {
@@ -596,6 +618,7 @@ function parseScriptMeta(fileName, fullPath) {
     let isGlobal = false;
     let isPinned = false;
     let createTab = '';
+    let noBotApply = false;
 
     for (const line of lines) {
       const nameMatch = line.match(/^\s*\/\/\s*BotSkripts-Name\s*:\s*(.+)\s*$/i);
@@ -615,6 +638,9 @@ function parseScriptMeta(fileName, fullPath) {
 
       const tabMatch = line.match(/^\s*\/\/\s*BotSkripts-CreateTab\s*:\s*(.+)\s*$/i);
       if (tabMatch) createTab = tabMatch[1].trim();
+
+      const noBotApplyMatch = line.match(/^\s*\/\/\s*BotSkripts-NoBotApply\s*:\s*(.+)\s*$/i);
+      if (noBotApplyMatch) noBotApply = ['true', 'yes', '1', 'on', 'да', 'вкл'].includes(noBotApplyMatch[1].trim().toLowerCase());
     }
 
     return {
@@ -625,6 +651,7 @@ function parseScriptMeta(fileName, fullPath) {
       isGlobal,
       isPinned,
       createTab,
+      noBotApply,
       valid: true,
       error: '',
       updatedAt: Date.now()
@@ -638,6 +665,7 @@ function parseScriptMeta(fileName, fullPath) {
       isGlobal: false,
       isPinned: false,
       createTab: '',
+      noBotApply: false,
       valid: false,
       error: err.message || String(err),
       updatedAt: Date.now()
@@ -673,6 +701,7 @@ function loadScriptsFromFolder({ announce = false, reapply = false } = {}) {
     isGlobal: !!s.isGlobal,
     isPinned: !!s.isPinned,
     createTab: s.createTab || '',
+    noBotApply: !!s.noBotApply,
     valid: s.valid,
     error: s.error,
     updatedAt: s.updatedAt
@@ -967,7 +996,13 @@ async function connectBot(config, botConfig, scriptAssignments, runId = launchRu
   });
 
   bot.on('chat', (chatUsername, message) => {
-    if (chatUsername && chatUsername !== username) telegramNotifyChat(chatUsername, message, username);
+    if (chatUsername && chatUsername !== username) {
+      log(`Чат ${username}: ${chatUsername}: ${message}`);
+      telegramNotifyChat(chatUsername, message, username);
+      if (discordState.running && discordState.features.chatNotifications) {
+        discordSend(`Чат Minecraft (${username})\n${chatUsername}: ${message}`).catch((err) => log(`Discord ошибка чата: ${err.message || err}`));
+      }
+    }
   });
 
   bot.once('spawn', async () => {
@@ -1101,6 +1136,120 @@ async function runConsoleCommand(input) {
   throw new Error('Неизвестная команда.');
 }
 
+
+function discordStatusPayload() {
+  return {
+    scriptEnabled: !!discordState.scriptEnabled,
+    running: !!discordState.running,
+    useBot: !!discordState.useBot,
+    guildId: discordState.guildId ? 'задан' : '',
+    channelId: discordState.channelId ? 'задан' : '',
+    webhook: discordState.webhook ? 'задан' : '',
+    features: { ...discordState.features }
+  };
+}
+
+function sendDiscordStatus() {
+  send('discord-status', discordStatusPayload());
+}
+
+function discordRequest(url, payload, token = '') {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify(payload);
+    const target = new URL(url);
+    const headers = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(body),
+      'User-Agent': 'BotsShink-Discord'
+    };
+    if (token) headers.Authorization = `Bot ${token}`;
+
+    const req = https.request({
+      hostname: target.hostname,
+      path: `${target.pathname}${target.search}`,
+      method: 'POST',
+      headers,
+      timeout: 18000
+    }, (res) => {
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          reject(new Error(`Discord ответил кодом ${res.statusCode}${data ? ': ' + data.slice(0, 180) : ''}`));
+          return;
+        }
+        resolve({ ok: true });
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('Таймаут Discord API.')));
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function discordSend(text) {
+  if (!discordState.running) return;
+  const content = String(text || '').slice(0, 1900);
+  if (!content) return;
+
+  if (discordState.useBot) {
+    if (!discordState.token || !discordState.channelId) return;
+    await discordRequest(`https://discord.com/api/v10/channels/${discordState.channelId}/messages`, { content }, discordState.token);
+  } else {
+    if (!discordState.webhook) return;
+    await discordRequest(discordState.webhook, { content, username: 'BotsShink' });
+  }
+}
+
+async function startDiscord(payload = {}) {
+  if (!discordState.scriptEnabled) throw new Error('Сначала включи общий скрипт “Дискорд” во вкладке Скрипты.');
+  discordState.useBot = payload.useBot !== false;
+  discordState.token = cleanText(payload.token).replace(/^Bot\s+/i, '');
+  discordState.webhook = cleanText(payload.webhook);
+  discordState.guildId = cleanText(payload.guildId);
+  discordState.channelId = cleanText(payload.channelId);
+  discordState.features = { ...discordState.features, ...(payload.features || {}) };
+
+  if (!discordState.guildId) throw new Error('Discord: ID сервера обязателен.');
+  if (discordState.useBot && (!discordState.token || !discordState.channelId)) throw new Error('Discord: для режима бота нужен token, ID сервера и ID канала.');
+  if (!discordState.useBot && !discordState.webhook) throw new Error('Discord: для режима Webhook нужен webhook канала и ID сервера.');
+
+  discordState.running = true;
+  sendDiscordStatus();
+  log(`Discord-интеграция запущена в режиме ${discordState.useBot ? 'бота' : 'Webhook'}.`);
+  try {
+    await discordSend(`BotsShink: Discord-интеграция запущена в режиме ${discordState.useBot ? 'бота' : 'Webhook'}.`);
+    if (discordState.features.serverOnline) await discordSend(`Сервер: ${currentServerLabel}
+Онлайн ботов: ${bots.size}`);
+    if (discordState.features.playersOnline) {
+      const players = new Set();
+      for (const record of bots.values()) {
+        const bot = record.bot;
+        if (bot && bot.entities) {
+          for (const entity of Object.values(bot.entities)) {
+            if (entity && entity.type === 'player' && entity.username && entity.username !== record.username) players.add(entity.username);
+          }
+        }
+      }
+      await discordSend(`Игроки на сервере: ${players.size ? [...players].join(', ') : 'не найдены'}`);
+    }
+  } catch (err) { log(`Discord: ошибка отправки тестового сообщения: ${err.message || err}`); }
+  return { ok: true, message: 'Discord-интеграция запущена.' };
+}
+
+function stopDiscord() {
+  discordState.running = false;
+  sendDiscordStatus();
+  log('Discord-интеграция остановлена.');
+  return { ok: true, message: 'Discord-интеграция остановлена.' };
+}
+
+function notifyDiscordBotEvent(message) {
+  if (discordState.running && discordState.features.botNotifications) discordSend(`Бот: ${message}`).catch((err) => log(`Discord ошибка: ${err.message || err}`));
+}
+
 function consoleStatusPayload() {
   return { scriptEnabled: !!consoleState.scriptEnabled };
 }
@@ -1148,6 +1297,7 @@ ipcMain.handle('get-scripts', () => {
     isGlobal: !!s.isGlobal,
     isPinned: !!s.isPinned,
     createTab: s.createTab || '',
+    noBotApply: !!s.noBotApply,
     valid: s.valid,
     error: s.error,
     updatedAt: s.updatedAt
@@ -1158,6 +1308,40 @@ ipcMain.handle('open-scripts-folder', async () => {
   ensureFolders();
   await shell.openPath(SCRIPT_DIR);
   return SCRIPT_DIR;
+});
+
+
+ipcMain.handle('import-scripts', async (_event, filePaths = []) => {
+  ensureFolders();
+  const imported = [];
+  const skipped = [];
+
+  for (const rawPath of Array.isArray(filePaths) ? filePaths : []) {
+    const source = cleanText(rawPath);
+    try {
+      if (!source || !source.toLowerCase().endsWith('.js')) {
+        skipped.push(`${path.basename(source || 'unknown')}: не .js файл`);
+        continue;
+      }
+      if (!fs.existsSync(source)) {
+        skipped.push(`${path.basename(source)}: файл не найден`);
+        continue;
+      }
+
+      const targetName = path.basename(source).replace(/[^A-Za-z0-9_.-]/g, '_');
+      const target = path.join(SCRIPT_DIR, targetName);
+      fs.copyFileSync(source, target);
+      imported.push(targetName);
+    } catch (err) {
+      skipped.push(`${path.basename(source)}: ${err.message || err}`);
+    }
+  }
+
+  loadScriptsFromFolder({ announce: true, reapply: true });
+  if (imported.length) log(`Импорт скриптов: добавлено ${imported.join(', ')}`);
+  if (skipped.length) log(`Импорт скриптов: пропущено ${skipped.join('; ')}`);
+
+  return { ok: imported.length > 0, imported, skipped };
 });
 
 ipcMain.handle('open-logo-folder', async () => {
@@ -1296,6 +1480,14 @@ ipcMain.handle('set-global-script', (_event, { scriptName, enabled }) => {
     return { ok: true, status: consoleStatusPayload() };
   }
 
+  if (scriptName === 'discord-app') {
+    discordState.scriptEnabled = !!enabled;
+    if (!discordState.scriptEnabled && discordState.running) stopDiscord();
+    sendDiscordStatus();
+    log(`Общий скрипт Дискорд ${discordState.scriptEnabled ? 'включён' : 'выключен'}.`);
+    return { ok: true, status: discordStatusPayload() };
+  }
+
   return { ok: false, message: 'Неизвестный общий скрипт.' };
 });
 
@@ -1324,6 +1516,19 @@ ipcMain.handle('telegram-start', async (_event, payload) => {
 ipcMain.handle('telegram-stop', () => stopTelegram());
 
 ipcMain.handle('telegram-status', () => telegramStatusPayload());
+
+ipcMain.handle('discord-start', async (_event, payload) => {
+  try {
+    return await startDiscord(payload || {});
+  } catch (err) {
+    uiError(err.message || String(err));
+    return { ok: false, message: err.message || String(err) };
+  }
+});
+
+ipcMain.handle('discord-stop', () => stopDiscord());
+
+ipcMain.handle('discord-status', () => discordStatusPayload());
 
 ipcMain.handle('check-updates', async () => {
   try {

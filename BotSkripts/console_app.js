@@ -2,6 +2,7 @@ Seleckt - BotSkripts
 // BotSkripts-Name: Консоль
 // BotSkripts-Global: true
 // BotSkripts-Pinned: true
+// BotSkripts-NoBotApply: true
 // BotSkripts-CreateTab: Консоль
 
 // Общий закреплённый модуль для вкладки "Консоль".

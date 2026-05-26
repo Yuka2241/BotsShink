@@ -50,6 +50,7 @@
           </button>
           <div class="nav-group-items">
             <button id="telegramTabButton" class="tab-button telegram-tab hidden" data-tab="telegram"><span class="nav-dot"></span>Телега</button>
+            <button id="discordTabButton" class="tab-button discord-tab hidden" data-tab="discord"><span class="nav-dot"></span>Дискорд</button>
           </div>
         </div>
         <div class="nav-group nav-group-open collapsible" data-nav-group="tools">
@@ -116,7 +117,7 @@
               </label>
               <label>
                 <span>Версия</span>
-                <input id="versionInput" type="text" value="auto" placeholder="auto или 1.20.1" />
+                <select id="versionInput"><option value="auto">auto</option><option value="1.21.8">1.21.8</option><option value="1.21.7">1.21.7</option><option value="1.21.6">1.21.6</option><option value="1.21.5">1.21.5</option><option value="1.21.4">1.21.4</option><option value="1.21.3">1.21.3</option><option value="1.21.2">1.21.2</option><option value="1.21.1">1.21.1</option><option value="1.21">1.21</option><option value="1.20.6">1.20.6</option><option value="1.20.5">1.20.5</option><option value="1.20.4">1.20.4</option><option value="1.20.3">1.20.3</option><option value="1.20.2">1.20.2</option><option value="1.20.1">1.20.1</option><option value="1.20">1.20</option><option value="1.19.4">1.19.4</option><option value="1.19.3">1.19.3</option><option value="1.19.2">1.19.2</option><option value="1.19.1">1.19.1</option><option value="1.19">1.19</option><option value="1.18.2">1.18.2</option><option value="1.18.1">1.18.1</option><option value="1.18">1.18</option><option value="1.17.1">1.17.1</option><option value="1.17">1.17</option><option value="1.16.5">1.16.5</option><option value="1.16.4">1.16.4</option><option value="1.16.3">1.16.3</option><option value="1.16.2">1.16.2</option><option value="1.16.1">1.16.1</option><option value="1.16">1.16</option><option value="1.15.2">1.15.2</option><option value="1.15.1">1.15.1</option><option value="1.15">1.15</option><option value="1.14.4">1.14.4</option><option value="1.14.3">1.14.3</option><option value="1.14.2">1.14.2</option><option value="1.14.1">1.14.1</option><option value="1.14">1.14</option><option value="1.13.2">1.13.2</option><option value="1.13.1">1.13.1</option><option value="1.13">1.13</option><option value="1.12.2">1.12.2</option><option value="1.12.1">1.12.1</option><option value="1.12">1.12</option><option value="1.11.2">1.11.2</option><option value="1.11.1">1.11.1</option><option value="1.11">1.11</option><option value="1.10.2">1.10.2</option><option value="1.10">1.10</option><option value="1.9.4">1.9.4</option><option value="1.9.2">1.9.2</option><option value="1.9">1.9</option><option value="1.8.9">1.8.9</option><option value="1.8.8">1.8.8</option><option value="1.8">1.8</option><option value="1.7.10">1.7.10</option></select>
               </label>
               <label>
                 <span>Задержка между входами, сек</span>
@@ -143,13 +144,6 @@
           <div id="homeStatusList" class="status-list empty">Пока нет запущенных ботов.</div>
         </section>
 
-        <section class="card log-card">
-          <div class="section-title-row">
-            <h3>Логи</h3>
-            <button id="clearLogBtn" class="ghost-button">Очистить</button>
-          </div>
-          <pre id="logOutput"></pre>
-        </section>
       </section>
 
       <section id="bots" class="tab-panel">
@@ -187,13 +181,50 @@
             <h2>Скрипты</h2>
             <p>Все скрипты из папки BotSkripts. Автообновление включено.</p>
           </div>
-          <button id="openScriptsBtn" class="primary-button">Загрузить</button>
+          <div class="header-actions"><button id="scriptsGuideBtn" class="secondary-button" type="button">Инструкция</button><button id="openScriptsBtn" class="primary-button">Загрузить</button></div>
         </header>
 
         <section class="card">
           <h3>Формат скрипта</h3>
-          <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Русское название</span><br><span>// BotSkripts-Config: targetPlayer</span><br><span>// BotSkripts-Global: true</span><br><span>// BotSkripts-Pinned: true</span><br><span>// BotSkripts-CreateTab: Телега</span><br><span>// BotSkripts-CreateTab: Консоль</span></div>
+          <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Русское название</span><br><span>// BotSkripts-Config: targetPlayer</span><br><span>// BotSkripts-Global: true</span><br><span>// BotSkripts-Pinned: true</span><br><span>// BotSkripts-CreateTab: Телега</span><br><span>// BotSkripts-CreateTab: Консоль</span><br><span>// BotSkripts-NoBotApply: true</span><br><span>// BotSkripts-CreateTab: Дискорд</span></div>
           <p class="hint">Первая строка обязательна. Global/Pinned закрепляет общий скрипт во вкладке Скрипты. CreateTab говорит приложению, какую вкладку открыть после включения.</p>
+        </section>
+
+        <section id="scriptsGuideCard" class="card scripts-guide-card hidden">
+          <div class="section-title-row">
+            <h3>Инструкция по скриптам и вкладкам</h3>
+            <button id="scriptsGuideCloseBtn" class="ghost-button" type="button">Скрыть</button>
+          </div>
+          <div class="guide-grid">
+            <div>
+              <h4>1. Базовый скрипт</h4>
+              <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Мой скрипт</span><br><br><span>module.exports = async function(api) {</span><br><span>&nbsp;&nbsp;api.log('Скрипт работает');</span><br><span>};</span></div>
+              <p class="hint">Первая строка обязательна. Без неё приложение не прочитает файл как скрипт.</p>
+            </div>
+            <div>
+              <h4>2. Новая вкладка из скрипта</h4>
+              <div class="code-box">Seleckt - BotSkripts<br><span>// BotSkripts-Name: Мой модуль</span><br><span>// BotSkripts-Global: true</span><br><span>// BotSkripts-Pinned: true</span><br><span>// BotSkripts-CreateTab: Моя вкладка</span><br><span>// BotSkripts-NoBotApply: true</span></div>
+              <p class="hint">Global/Pinned закрепляет модуль во вкладке “Скрипты”. CreateTab создаёт вкладку. NoBotApply запрещает назначать модуль отдельным ботам.</p>
+            </div>
+            <div>
+              <h4>3. Изменение интерфейса</h4>
+              <p class="hint">Через метки скрипт сообщает приложению, какую вкладку создать. Сам HTML/CSS вкладки должен быть поддержан в приложении. Для новых сложных вкладок добавляй блок в index.html, обработчики в renderer.js и IPC в main.js.</p>
+              <div class="code-box"><span>index.html → новая section tab-panel</span><br><span>renderer.js → кнопки, сохранение, отображение</span><br><span>main.js → логика, сеть, файлы, API</span></div>
+            </div>
+            <div>
+              <h4>4. Скрипт для конкретного бота</h4>
+              <div class="code-box">// BotSkripts-Config: targetPlayer</div>
+              <p class="hint">Добавляет выбор игрока рядом со скриптом. Такой скрипт можно назначать каждому боту отдельно.</p>
+            </div>
+            <div>
+              <h4>5. Общий модуль</h4>
+              <p class="hint">Телега, Консоль и Дискорд — общие модули. Они включаются во вкладке “Скрипты” и работают для всех ботов сразу.</p>
+            </div>
+            <div>
+              <h4>6. Результат</h4>
+              <p class="hint">Чтобы приложение было как пластилин: маленькие действия делай обычными BotSkripts, а большие модули делай закреплёнными вкладками через Global + Pinned + CreateTab + NoBotApply.</p>
+            </div>
+          </div>
         </section>
 
         <section class="card">
@@ -278,6 +309,70 @@
         </section>
       </section>
 
+      <section id="discord" class="tab-panel discord-panel">
+        <header class="page-header">
+          <div>
+            <h2>Дискорд</h2>
+            <p>Интеграция Discord: режим бота или режим Webhook.</p>
+          </div>
+          <div class="header-actions">
+            <button id="discordStartBtn" class="primary-button" type="button">Запустить Дискорд</button>
+            <button id="discordStopBtn" class="danger-button" type="button">Остановить</button>
+          </div>
+        </header>
+
+        <section class="card discord-card discord-connection-card">
+          <div class="section-title-row">
+            <h3>Подключение Discord</h3>
+            <span id="discordStatusBadge" class="badge neutral">Остановлено</span>
+          </div>
+
+          <div class="discord-mode-switch settings-option">
+            <div>
+              <strong>Discord-бот</strong>
+              <p id="discordModeHint">Включено: используется токен бота, ID сервера и ID канала. Выключено: используется Webhook и ID сервера.</p>
+            </div>
+            <button id="discordBotModeToggle" class="settings-toggle" type="button">Вкл</button>
+          </div>
+
+          <div class="discord-form-grid">
+            <label class="discord-field discord-bot-field">
+              <span>Токен Discord-бота</span>
+              <input id="discordTokenInput" type="password" placeholder="Bot token" autocomplete="off" />
+            </label>
+            <label class="discord-field discord-webhook-field hidden">
+              <span>Webhook канала</span>
+              <input id="discordWebhookInput" type="password" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" />
+            </label>
+            <label class="discord-field discord-common-field">
+              <span>ID сервера</span>
+              <input id="discordGuildIdInput" type="text" placeholder="обязательно" autocomplete="off" />
+            </label>
+            <label class="discord-field discord-bot-field">
+              <span>ID канала, куда пишет бот</span>
+              <input id="discordChannelIdInput" type="text" placeholder="обязательно для режима бота" autocomplete="off" />
+            </label>
+          </div>
+
+          <div id="discordModeNote" class="discord-mode-note">
+            Режим бота: введи токен Discord-бота, ID сервера и ID канала. Webhook в этом режиме скрыт и не используется.
+          </div>
+        </section>
+
+        <section class="card discord-functions-card">
+          <div class="section-title-row">
+            <h3>Функции Discord</h3>
+            <span class="hint">Работают для всех ботов, когда включён общий скрипт “Дискорд”.</span>
+          </div>
+          <div class="telegram-features discord-features">
+            <div class="discord-feature-row" data-feature="botNotifications"><div><strong>Уведомления о боте</strong><p>Вход, выход, кик и ошибки ботов.</p></div><button class="discord-feature-toggle" type="button">Выкл</button></div>
+            <div class="discord-feature-row" data-feature="chatNotifications"><div><strong>Уведомления чата</strong><p>Отправляет игровой чат в Discord.</p></div><button class="discord-feature-toggle" type="button">Выкл</button></div>
+            <div class="discord-feature-row" data-feature="serverOnline"><div><strong>Онлайн сервера</strong><p>Показывает текущий сервер и онлайн ботов.</p></div><button class="discord-feature-toggle" type="button">Выкл</button></div>
+            <div class="discord-feature-row" data-feature="playersOnline"><div><strong>Игроки на сервере</strong><p>Показывает игроков, которых видят боты.</p></div><button class="discord-feature-toggle" type="button">Выкл</button></div>
+          </div>
+        </section>
+      </section>
+
       <section id="console" class="tab-panel console-panel">
         <header class="page-header console-header-pro">
           <div>
@@ -293,7 +388,12 @@
             <strong>BotsShink Terminal</strong>
             <span class="hint">Enter для запуска</span>
           </div>
-          <pre id="consoleOutput" class="terminal-output"></pre>
+          <div class="console-section-tabs">
+            <button class="console-section-tab active" data-console-section="general" type="button">Общий</button>
+            <button class="console-section-tab" data-console-section="logs" type="button">Логи</button>
+          </div>
+          <pre id="consoleOutput" class="terminal-output console-section-output active" data-console-output="general"></pre>
+          <pre id="consoleLogsOutput" class="terminal-output console-section-output" data-console-output="logs"></pre>
           <div class="console-command-row terminal-input-row">
             <span class="terminal-prompt">&gt;</span>
             <input id="consoleCommandInput" type="text" placeholder='say "Bot_1" "Привет"' autocomplete="off" />
@@ -384,18 +484,40 @@
                 <option value="large">Крупнее</option>
               </select>
             </label>
+            
+            <label>
+              <span>Что настраивать</span>
+              <select id="customizeModeSelect">
+                <option value="none">None</option>
+                <option value="buttons">Кнопки</option>
+                <option value="appearance">Внешний вид</option>
+              </select>
+            </label>
+            <div id="customizeControls" class="customize-controls hidden">
+              <label>
+                <span>Цвет</span>
+                <input id="customColorInput" type="color" value="#ffffff" />
+              </label>
+              <label>
+                <span>Прозрачность</span>
+                <input id="customOpacityInput" type="range" min="20" max="100" value="65" />
+              </label>
+            </div>
             <div class="settings-preview">
               <div class="preview-card"><strong>Предпросмотр</strong><span>Карточка BotsShink</span></div>
             </div>
           </section>
         </div>
 
-        <section class="card">
-          <h3>Пустые состояния</h3>
-          <p class="hint">Интерфейс теперь показывает красивые подсказки, когда нет ботов, скриптов, Telegram или консоли.</p>
-        </section>
       </section>
     </main>
+  </div>
+
+  <div id="dropOverlay" class="drop-overlay hidden">
+    <div class="drop-card">
+      <strong>Добавить скрипт</strong>
+      <p>Перетащи .js файл сюда — он попадёт в BotSkripts и сразу появится во вкладке Скрипты.</p>
+    </div>
   </div>
 
   <div id="toast" class="toast"></div>
