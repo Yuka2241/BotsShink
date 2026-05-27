@@ -1,6 +1,6 @@
 {
   "name": "botsshink",
-  "version": "1.35.0",
+  "version": "1.36.0",
   "description": "BotsShink custom UI panel and installer for Mineflayer bots on allowed Minecraft servers.",
   "main": "main.js",
   "scripts": {
@@ -15,7 +15,8 @@
   "dependencies": {
     "mineflayer": "^4.28.1",
     "mineflayer-pathfinder": "^2.4.5",
-    "minecraft-data": "^3.83.0"
+    "minecraft-data": "^3.83.0",
+    "discord-rpc": "^4.0.1"
   },
   "devDependencies": {
     "electron-builder": "^25.1.8",

@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
-set APP_VERSION=1.35.0
-set RELEASE_TAG=v1.35.0
+set APP_VERSION=1.36.0
+set RELEASE_TAG=v1.36.0
 
 echo ========================================
 echo      BotsShink Release File Check

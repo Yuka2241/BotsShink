@@ -4,8 +4,8 @@ cd /d "%~dp0"
 set CSC_IDENTITY_AUTO_DISCOVERY=false
 set ELECTRON_BUILDER_CACHE=%LOCALAPPDATA%\electron-builder\Cache
 
-set APP_VERSION=1.35.0
-set RELEASE_TAG=v1.35.0
+set APP_VERSION=1.36.0
+set RELEASE_TAG=v1.36.0
 
 echo ========================================
 echo   BotsShink GitHub Web Installer Build

@@ -525,6 +525,39 @@
               <div class="preview-card"><strong>Предпросмотр</strong><span>Карточка BotsShink</span></div>
             </div>
           </section>
+
+          <section class="card settings-card discord-activity-card">
+            <h3>Discord Activity</h3>
+            <p class="muted">Показывает в Discord, что ты играешь/работаешь в BotsShink.</p>
+            <label>
+              <span>Client ID</span>
+              <input id="discordActivityClientIdInput" type="text" value="15087••••••••••2183" readonly disabled />
+            </label>
+            <div class="settings-option">
+              <div><strong>Discord Activity</strong><p>Работает только с Discord Desktop.</p></div>
+              <button id="discordActivityToggle" class="settings-toggle" type="button">Выкл</button>
+            </div>
+            <div class="settings-option">
+              <div><strong>Показывать сервер</strong><p>Отображает текущий IP и порт сервера.</p></div>
+              <button id="discordActivityServerToggle" class="settings-toggle" type="button">Вкл</button>
+            </div>
+            <div class="settings-option">
+              <div><strong>Показывать ботов</strong><p>Отображает количество онлайн-ботов.</p></div>
+              <button id="discordActivityBotsToggle" class="settings-toggle" type="button">Вкл</button>
+            </div>
+            <div class="settings-option">
+              <div><strong>Показывать скрипты</strong><p>Отображает количество активных скриптов.</p></div>
+              <button id="discordActivityScriptsToggle" class="settings-toggle" type="button">Вкл</button>
+            </div>
+            <div class="settings-option">
+              <div><strong>Показывать таймер</strong><p>Показывает время с запуска BotsShink.</p></div>
+              <button id="discordActivityTimerToggle" class="settings-toggle" type="button">Вкл</button>
+            </div>
+            <div class="status-line">
+              <span>Статус</span>
+              <strong id="discordActivityStatusText">Выключено</strong>
+            </div>
+          </section>
         </div>
 
       </section>

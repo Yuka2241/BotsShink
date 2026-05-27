@@ -1,0 +1,19 @@
+Discord Activity / Rich Presence для BotsShink
+
+Client ID: 1508794738478682183
+Discord канал: https://discord.gg/cfh8DbCZ3g
+GitHub latest: https://github.com/Yuka2241/BotsShink/releases/latest
+
+Что показывает активность:
+- актуальную последнюю версию приложения;
+- количество онлайн-ботов;
+- текущий сервер;
+- активные скрипты;
+- таймер работы приложения;
+- кнопки GitHub latest и Discord channel.
+
+Логотип:
+1) Возьми файл build/discord_activity_logo_botsshink.png.
+2) Загрузи его в Discord Developer Portal -> Rich Presence -> Art Assets.
+3) Назови asset: botsshink.
+4) В коде уже указан largeImageKey: botsshink.

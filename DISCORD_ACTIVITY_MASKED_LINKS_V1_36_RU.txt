@@ -1,0 +1,7 @@
+BotsShink 1.36.0 — Discord Activity masked Client ID and links
+
+Изменено:
+- Client ID в настройках Discord Activity теперь скрыт частично и недоступен для редактирования.
+- Внутри приложения по-прежнему используется рабочий Discord Application ID.
+- В Discord Activity вместо строк про ботов и скрипты теперь отображаются ссылки GitHub и Discord.
+- В Activity добавлены кнопки GitHub и Discord.

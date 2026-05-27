@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld('botPanel', {
   startDiscord: (payload) => ipcRenderer.invoke('discord-start', payload),
   stopDiscord: () => ipcRenderer.invoke('discord-stop'),
   getDiscordStatus: () => ipcRenderer.invoke('discord-status'),
+  startDiscordActivity: (payload) => ipcRenderer.invoke('discord-activity-start', payload),
+  stopDiscordActivity: () => ipcRenderer.invoke('discord-activity-stop'),
+  getDiscordActivityStatus: () => ipcRenderer.invoke('discord-activity-status'),
   getConsoleStatus: () => ipcRenderer.invoke('console-status'),
   runConsoleCommand: (commandText) => ipcRenderer.invoke('console-run-command', commandText),
   checkUpdates: () => ipcRenderer.invoke('check-updates'),
@@ -35,5 +38,6 @@ contextBridge.exposeInMainWorld('botPanel', {
   onWindowState: (callback) => ipcRenderer.on('window-state', (_event, value) => callback(value)),
   onTelegramStatus: (callback) => ipcRenderer.on('telegram-status', (_event, value) => callback(value)),
   onDiscordStatus: (callback) => ipcRenderer.on('discord-status', (_event, value) => callback(value)),
+  onDiscordActivityStatus: (callback) => ipcRenderer.on('discord-activity-status', (_event, value) => callback(value)),
   onConsoleStatus: (callback) => ipcRenderer.on('console-status', (_event, value) => callback(value))
 });

@@ -13,7 +13,7 @@ echo    BotsShink Clean Installer Build
 echo ========================================
 echo.
 echo This will delete node_modules and dist, then build installer.
-echo Output: dist\BotsShink-Setup-1.24.0.exe
+echo Output: dist\BotsShink-Setup-1.36.0.exe
 echo.
 
 if exist node_modules (
@@ -51,8 +51,8 @@ if errorlevel 1 (
 )
 
 echo.
-if exist "dist\BotsShink-Setup-1.24.0.exe" (
-  echo DONE: dist\BotsShink-Setup-1.24.0.exe
+if exist "dist\BotsShink-Setup-1.36.0.exe" (
+  echo DONE: dist\BotsShink-Setup-1.36.0.exe
 ) else (
   echo Build ended, but expected file was not found. Check dist folder.
 )

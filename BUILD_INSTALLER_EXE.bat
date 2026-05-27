@@ -12,7 +12,7 @@ echo ========================================
 echo      BotsShink Installer Build
 echo ========================================
 echo.
-echo This builds: dist\BotsShink-Setup-1.35.0.exe
+echo This builds: dist\BotsShink-Setup-1.36.0.exe
 echo.
 
 where node >nul 2>nul
@@ -57,8 +57,8 @@ if errorlevel 1 (
 )
 
 echo.
-if exist "dist\BotsShink-Setup-1.35.0.exe" (
-  echo DONE: dist\BotsShink-Setup-1.35.0.exe
+if exist "dist\BotsShink-Setup-1.36.0.exe" (
+  echo DONE: dist\BotsShink-Setup-1.36.0.exe
 ) else (
   echo Build ended, but expected file was not found.
   echo Open dist folder and check the exact file name.

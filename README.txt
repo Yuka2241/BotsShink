@@ -1,26 +1,25 @@
-Minecraft Black Bot UI Multi v1.7
+BotsShink 1.36.0
 
-Запуск:
-1) Установи Node.js LTS.
-2) Открой папку проекта в терминале.
-3) npm install
-4) npm start
+Официальный GitHub: https://github.com/Yuka2241/BotsShink
+Мой Discord канал: https://discord.gg/cfh8DbCZ3g
 
-Важно:
-- Используй только на своём сервере или там, где тебе разрешили запускать ботов.
-- Ники Minecraft: 3-16 символов, английские буквы, цифры или _.
-- Если сервер пишет Connection throttled, увеличь задержку между входами.
+ФЕЙКИ:
+Я не веду никакие другие страницы/группы в Telegram/YouTube. Если что-то распространяется вне этой страницы GitHub от моего лица — это фейк.
 
-Папки:
-- BotSkripts — сюда класть скрипты.
-- logo — сюда можно положить logo.png/logo.jpg/logo.webp.
+Описание:
+BotsShink — desktop-приложение для управления Minecraft Java ботами через UI.
 
-Формат скрипта:
-Первая строка обязательно:
-Seleckt - BotSkripts
+Установка:
+1) Открой https://github.com/Yuka2241/BotsShink/releases/latest
+2) Скачай BotsShink-Web-Setup-1.36.0.exe
+3) Запусти установщик.
 
-Для русского названия:
-// BotSkripts-Name: Название
+Запуск из исходников:
+npm install
+npm start
 
-Для выбора игрока в UI:
-// BotSkripts-Config: targetPlayer
+Сборка:
+BUILD_WEB_INSTALLER_GITHUB.bat
+
+Discord Activity:
+Включена поддержка Rich Presence. Для логотипа загрузи build/discord_activity_logo_botsshink.png в Discord Developer Portal как asset с именем botsshink.

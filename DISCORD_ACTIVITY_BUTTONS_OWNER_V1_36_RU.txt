@@ -1,0 +1,7 @@
+BotsShink 1.36.0 — Discord Activity buttons and owner text
+
+Изменения:
+- Из описания Discord Activity убраны ссылки GitHub и Discord.
+- В описании Discord Activity теперь отображается: Discord Owner: moz1ks.
+- Ниже оставлены кликабельные кнопки Rich Presence: GitHub и Discord.
+- Версия приложения остаётся 1.36.0.

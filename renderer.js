@@ -33,6 +33,16 @@ const state = {
       playersOnline: false
     }
   }),
+  discordActivity: loadJson('discordActivitySettings', {
+    enabled: true,
+    clientId: '1508794738478682183',
+    showServer: true,
+    showBots: true,
+    showScripts: true,
+    showTimer: true,
+    connected: false,
+    error: ''
+  }),
   consoleApp: loadJson('consoleSettings', {
     scriptEnabled: false,
     history: [],
@@ -486,6 +496,89 @@ function saveDiscordSettings() {
   saveJson('discordSettings', state.discord);
 }
 
+function saveDiscordActivitySettings() {
+  const saved = { ...state.discordActivity };
+  delete saved.connected;
+  delete saved.error;
+  saveJson('discordActivitySettings', saved);
+}
+
+function maskDiscordActivityClientId(value) {
+  const raw = String(value || '1508794738478682183').replace(/\D/g, '');
+  if (raw.length <= 8) return raw;
+  const keepStart = Math.ceil(raw.length / 4);
+  const keepEnd = Math.ceil(raw.length / 4);
+  return raw.slice(0, keepStart) + '•'.repeat(Math.max(4, raw.length - keepStart - keepEnd)) + raw.slice(-keepEnd);
+}
+
+function renderDiscordActivitySettings() {
+  const cfg = state.discordActivity;
+  const clientInput = $('discordActivityClientIdInput');
+  if (clientInput) {
+    clientInput.value = maskDiscordActivityClientId(cfg.clientId || '1508794738478682183');
+    clientInput.readOnly = true;
+    clientInput.disabled = true;
+    clientInput.title = 'Client ID скрыт и защищён от изменения';
+  }
+
+  const pairs = [
+    ['discordActivityToggle', cfg.enabled],
+    ['discordActivityServerToggle', cfg.showServer],
+    ['discordActivityBotsToggle', cfg.showBots],
+    ['discordActivityScriptsToggle', cfg.showScripts],
+    ['discordActivityTimerToggle', cfg.showTimer]
+  ];
+
+  for (const [id, enabled] of pairs) {
+    const el = $(id);
+    if (!el) continue;
+    el.textContent = enabled ? 'Вкл' : 'Выкл';
+    el.classList.toggle('active', !!enabled);
+  }
+
+  const status = $('discordActivityStatusText');
+  if (status) {
+    if (!cfg.enabled) status.textContent = 'Выключено';
+    else if (cfg.connected) status.textContent = 'Подключено к Discord Desktop';
+    else if (cfg.error) status.textContent = 'Ошибка: ' + cfg.error;
+    else status.textContent = 'Подключается к Discord Desktop...';
+  }
+}
+
+async function applyDiscordActivitySettings() {
+  saveDiscordActivitySettings();
+  renderDiscordActivitySettings();
+
+  if (!window.botPanel || !window.botPanel.startDiscordActivity) return;
+
+  if (state.discordActivity.enabled) {
+    const result = await window.botPanel.startDiscordActivity({
+      enabled: true,
+      clientId: '1508794738478682183',
+      showServer: !!state.discordActivity.showServer,
+      showBots: !!state.discordActivity.showBots,
+      showScripts: !!state.discordActivity.showScripts,
+      showTimer: !!state.discordActivity.showTimer
+    });
+    if (result && result.status) {
+      state.discordActivity.connected = !!result.status.connected;
+      state.discordActivity.error = result.status.error || result.message || '';
+      renderDiscordActivitySettings();
+    } else if (result && result.message) {
+      state.discordActivity.connected = false;
+      state.discordActivity.error = result.message;
+      renderDiscordActivitySettings();
+    }
+  } else {
+    const result = await window.botPanel.stopDiscordActivity();
+    if (result && result.status) {
+      state.discordActivity.connected = false;
+      state.discordActivity.error = '';
+      renderDiscordActivitySettings();
+    }
+  }
+}
+
 function updateTelegramVisibility() {
   const button = $('telegramTabButton');
   const panel = $('telegram');
@@ -807,6 +900,7 @@ function applyUiSettings() {
   const customizeMode = $('customizeModeSelect');
   const customColor = $('customColorInput');
   const customOpacity = $('customOpacityInput');
+  const discordActivityClientId = $('discordActivityClientIdInput');
   if (themeSelect) themeSelect.value = ui.theme || 'matte';
   if (panelOpacity) panelOpacity.value = String(ui.panelOpacity || 48);
   if (dotSpeed) dotSpeed.value = ui.dotSpeed || 'normal';
@@ -847,6 +941,7 @@ function initSettingsEvents() {
   const customizeMode = $('customizeModeSelect');
   const customColor = $('customColorInput');
   const customOpacity = $('customOpacityInput');
+  const discordActivityClientId = $('discordActivityClientIdInput');
   if (uiScale) uiScale.addEventListener('change', () => {
     state.ui.uiScale = uiScale.value;
     saveUiSettings();
@@ -888,6 +983,33 @@ function initSettingsEvents() {
     applyUiSettings();
   });
 
+
+  if (discordActivityClientId) {
+    discordActivityClientId.readOnly = true;
+    discordActivityClientId.disabled = true;
+    discordActivityClientId.value = maskDiscordActivityClientId(state.discordActivity.clientId || '1508794738478682183');
+  }
+
+  bindClick('discordActivityToggle', () => {
+    state.discordActivity.enabled = !state.discordActivity.enabled;
+    applyDiscordActivitySettings();
+  });
+  bindClick('discordActivityServerToggle', () => {
+    state.discordActivity.showServer = !state.discordActivity.showServer;
+    applyDiscordActivitySettings();
+  });
+  bindClick('discordActivityBotsToggle', () => {
+    state.discordActivity.showBots = !state.discordActivity.showBots;
+    applyDiscordActivitySettings();
+  });
+  bindClick('discordActivityScriptsToggle', () => {
+    state.discordActivity.showScripts = !state.discordActivity.showScripts;
+    applyDiscordActivitySettings();
+  });
+  bindClick('discordActivityTimerToggle', () => {
+    state.discordActivity.showTimer = !state.discordActivity.showTimer;
+    applyDiscordActivitySettings();
+  });
 
   bindClick('settingsResetBtn', () => {
     state.ui = { theme: 'matte', blur: false, dots: true, compact: false, panelOpacity: 48, dotSpeed: 'normal', uiScale: 'normal', customizeMode: 'none', customColor: '#ffffff', customOpacity: 65 };
@@ -1375,6 +1497,18 @@ function initIpc() {
   window.botPanel.onWindowState(updateWindowState);
   window.botPanel.onTelegramStatus(setTelegramStatus);
   window.botPanel.onDiscordStatus(setDiscordStatus);
+  window.botPanel.onDiscordActivityStatus((status) => {
+    if (!status) return;
+    state.discordActivity.enabled = !!status.enabled;
+    state.discordActivity.connected = !!status.connected;
+    state.discordActivity.clientId = status.clientId || state.discordActivity.clientId || '1508794738478682183';
+    state.discordActivity.showServer = !!status.showServer;
+    state.discordActivity.showBots = !!status.showBots;
+    state.discordActivity.showScripts = !!status.showScripts;
+    state.discordActivity.showTimer = !!status.showTimer;
+    state.discordActivity.error = status.error || '';
+    renderDiscordActivitySettings();
+  });
   window.botPanel.onConsoleStatus((status) => {
     if (status && typeof status.scriptEnabled === 'boolean') {
       state.consoleApp.scriptEnabled = status.scriptEnabled;
@@ -1401,6 +1535,7 @@ function initIpc() {
   renderScriptList();
   renderTelegramSettings();
   renderDiscordSettings();
+  renderDiscordActivitySettings();
   renderConsoleHistory();
   renderConsoleLogs();
   updateConsoleVisibility();
@@ -1408,6 +1543,7 @@ function initIpc() {
   await window.botPanel.setGlobalScript({ scriptName: 'telegram-app', enabled: !!state.telegram.scriptEnabled });
   await window.botPanel.setGlobalScript({ scriptName: 'console-app', enabled: !!state.consoleApp.scriptEnabled });
   await window.botPanel.setGlobalScript({ scriptName: 'discord-app', enabled: !!state.discord.scriptEnabled });
+  await applyDiscordActivitySettings();
   renderHomeStatuses();
   refreshCounts();
   setTimeout(() => checkUpdates(false), 1500);

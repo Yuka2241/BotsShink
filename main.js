@@ -7,6 +7,8 @@ const { pathToFileURL } = require('url');
 const Module = require('module');
 const https = require('https');
 const mineflayer = require('mineflayer');
+let DiscordRPC = null;
+try { DiscordRPC = require('discord-rpc'); } catch (_) { DiscordRPC = null; }
 
 const SOURCE_ROOT = __dirname;
 const RUNTIME_ROOT = app.isPackaged ? path.dirname(process.execPath) : SOURCE_ROOT;
@@ -21,6 +23,7 @@ const GITHUB_OWNER = 'Yuka2241';
 const GITHUB_REPO = 'BotsShink';
 const GITHUB_LATEST_RELEASE_API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`;
+const DISCORD_ACTIVITY_CLIENT_ID = '1508794738478682183';
 
 
 let mainWindow = null;
@@ -91,9 +94,205 @@ const discordState = {
   }
 };
 
+const discordActivityState = {
+  enabled: false,
+  connected: false,
+  clientId: DISCORD_ACTIVITY_CLIENT_ID,
+  showServer: true,
+  showBots: true,
+  showScripts: true,
+  showTimer: true,
+  rpc: null,
+  startedAt: null,
+  reconnectTimer: null,
+  activityUpdateTimer: null,
+  lastError: ''
+};
+
 const consoleState = {
   scriptEnabled: false
 };
+
+function discordActivityStatusPayload() {
+  return {
+    enabled: !!discordActivityState.enabled,
+    connected: !!discordActivityState.connected,
+    clientId: discordActivityState.clientId,
+    showServer: !!discordActivityState.showServer,
+    showBots: !!discordActivityState.showBots,
+    showScripts: !!discordActivityState.showScripts,
+    showTimer: !!discordActivityState.showTimer,
+    error: discordActivityState.lastError || ''
+  };
+}
+
+function sendDiscordActivityStatus() {
+  send('discord-activity-status', discordActivityStatusPayload());
+}
+
+function countOnlineBots() {
+  return [...bots.values()].filter((record) => record.status === 'online').length;
+}
+
+function countActiveScripts() {
+  const names = new Set();
+  for (const record of bots.values()) {
+    for (const name of record.activeScripts.keys()) names.add(name);
+  }
+  if (telegramState.scriptEnabled) names.add('telegram-app');
+  if (discordState.scriptEnabled) names.add('discord-app');
+  if (consoleState.scriptEnabled) names.add('console-app');
+  return names.size;
+}
+
+async function setDiscordActivityPresence() {
+  if (!discordActivityState.enabled || !discordActivityState.rpc || !discordActivityState.connected) return;
+
+  const activity = {
+    details: 'Discord Owner: moz1ks',
+    details_url: 'https://github.com/Yuka2241/BotsShink',
+    state: 'BotsShink official',
+    state_url: 'https://discord.gg/cfh8DbCZ3g',
+    instance: false,
+    // Discord Desktop can show button labels but ignore links when the older RPC client
+    // sends buttons as objects. Send the labels plus metadata.button_urls, and keep
+    // the object form as a fallback for clients that still support it.
+    buttons: ['GitHub', 'Discord'],
+    metadata: {
+      button_urls: [
+        'https://github.com/Yuka2241/BotsShink',
+        'https://discord.gg/cfh8DbCZ3g'
+      ]
+    }
+  };
+
+  if (discordActivityState.showTimer) {
+    if (!discordActivityState.startedAt) discordActivityState.startedAt = Date.now();
+    activity.startTimestamp = discordActivityState.startedAt;
+  }
+
+  try {
+    await discordActivityState.rpc.setActivity(activity);
+    discordActivityState.lastError = '';
+    sendDiscordActivityStatus();
+  } catch (err) {
+    discordActivityState.lastError = err.message || String(err);
+    sendDiscordActivityStatus();
+  }
+}
+
+
+function startDiscordActivityUpdater() {
+  if (discordActivityState.activityUpdateTimer) clearInterval(discordActivityState.activityUpdateTimer);
+  discordActivityState.activityUpdateTimer = setInterval(() => {
+    setDiscordActivityPresence().catch(() => {});
+  }, 15000);
+}
+
+function stopDiscordActivityUpdater() {
+  if (discordActivityState.activityUpdateTimer) {
+    clearInterval(discordActivityState.activityUpdateTimer);
+    discordActivityState.activityUpdateTimer = null;
+  }
+}
+
+function scheduleDiscordActivityReconnect() {
+  if (discordActivityState.reconnectTimer || !discordActivityState.enabled) return;
+  discordActivityState.reconnectTimer = setTimeout(() => {
+    discordActivityState.reconnectTimer = null;
+    if (discordActivityState.enabled && !discordActivityState.connected) startDiscordActivity(discordActivityState).catch(() => {});
+  }, 5000);
+}
+
+async function startDiscordActivity(payload = {}) {
+  discordActivityState.enabled = !!payload.enabled;
+  discordActivityState.clientId = cleanText(payload.clientId) || DISCORD_ACTIVITY_CLIENT_ID;
+  discordActivityState.showServer = payload.showServer !== false;
+  discordActivityState.showBots = payload.showBots !== false;
+  discordActivityState.showScripts = payload.showScripts !== false;
+  discordActivityState.showTimer = payload.showTimer !== false;
+
+  if (!discordActivityState.enabled) return stopDiscordActivity();
+  if (!DiscordRPC) {
+    discordActivityState.connected = false;
+    discordActivityState.lastError = 'Пакет discord-rpc не установлен. Запусти npm install.';
+    sendDiscordActivityStatus();
+    return { ok: false, status: discordActivityStatusPayload(), message: discordActivityState.lastError };
+  }
+
+  try {
+    if (discordActivityState.rpc && discordActivityState.connected) {
+      await setDiscordActivityPresence();
+      return { ok: true, status: discordActivityStatusPayload() };
+    }
+
+    if (discordActivityState.rpc) {
+      try { discordActivityState.rpc.destroy(); } catch (_) {}
+      discordActivityState.rpc = null;
+    }
+
+    DiscordRPC.register(discordActivityState.clientId);
+    const rpc = new DiscordRPC.Client({ transport: 'ipc' });
+    discordActivityState.rpc = rpc;
+    discordActivityState.startedAt = Date.now();
+
+    rpc.on('ready', async () => {
+      discordActivityState.connected = true;
+      discordActivityState.lastError = '';
+      log('Discord Activity подключена. Если статус не виден, проверь Discord Desktop → Activity Privacy.');
+      sendDiscordActivityStatus();
+      await setDiscordActivityPresence();
+      startDiscordActivityUpdater();
+    });
+
+    rpc.on('disconnected', () => {
+      discordActivityState.connected = false;
+      stopDiscordActivityUpdater();
+      sendDiscordActivityStatus();
+      scheduleDiscordActivityReconnect();
+    });
+
+    await rpc.login({ clientId: discordActivityState.clientId });
+    return { ok: true, status: discordActivityStatusPayload() };
+  } catch (err) {
+    discordActivityState.connected = false;
+    const rawMessage = err.message || String(err);
+    discordActivityState.lastError = rawMessage.includes('Could not connect') || rawMessage.includes('RPC_CONNECTION_TIMEOUT') || rawMessage.includes('IPC')
+      ? 'Discord Desktop не найден или не разрешает активность. Открой Discord Desktop и включи Activity Privacy.'
+      : rawMessage;
+    log('Discord Activity ошибка: ' + discordActivityState.lastError);
+    sendDiscordActivityStatus();
+    scheduleDiscordActivityReconnect();
+    return { ok: false, status: discordActivityStatusPayload(), message: discordActivityState.lastError };
+  }
+}
+
+function stopDiscordActivity() {
+  discordActivityState.enabled = false;
+  discordActivityState.connected = false;
+  discordActivityState.lastError = '';
+  if (discordActivityState.reconnectTimer) {
+    clearTimeout(discordActivityState.reconnectTimer);
+    discordActivityState.reconnectTimer = null;
+  }
+  stopDiscordActivityUpdater();
+  if (discordActivityState.rpc) {
+    try { discordActivityState.rpc.clearActivity && discordActivityState.rpc.clearActivity(); } catch (_) {}
+    try { discordActivityState.rpc.destroy(); } catch (_) {}
+    discordActivityState.rpc = null;
+  }
+  sendDiscordActivityStatus();
+  return { ok: true, status: discordActivityStatusPayload() };
+}
+
+function refreshDiscordActivitySoon() {
+  if (!discordActivityState.enabled) return;
+  clearTimeout(refreshDiscordActivitySoon.timer);
+  refreshDiscordActivitySoon.timer = setTimeout(() => {
+    setDiscordActivityPresence().catch(() => {});
+  }, 700);
+}
+
 
 
 function copyFolderIfTargetEmpty(sourceDir, targetDir) {
@@ -583,6 +782,7 @@ function sendBotStatuses() {
   send('bot-statuses', items);
   const active = items.filter((b) => b.status === 'online').length;
   send('active-count', { active, total: items.length });
+  refreshDiscordActivitySoon();
 }
 
 function setBotStatus(username, status, reason = '') {
@@ -1363,6 +1563,7 @@ ipcMain.handle('start-bots', async (_event, payload) => {
   try {
     const config = normalizeServerConfig(payload.server || {});
     currentServerLabel = `${config.host}:${config.port}`;
+    refreshDiscordActivitySoon();
     const rows = Array.isArray(payload.bots) ? payload.bots : [];
     const assignments = payload.scriptAssignments || {};
 
@@ -1530,6 +1731,13 @@ ipcMain.handle('discord-stop', () => stopDiscord());
 
 ipcMain.handle('discord-status', () => discordStatusPayload());
 
+
+ipcMain.handle('discord-activity-start', async (_event, payload) => startDiscordActivity(payload || {}));
+
+ipcMain.handle('discord-activity-stop', () => stopDiscordActivity());
+
+ipcMain.handle('discord-activity-status', () => discordActivityStatusPayload());
+
 ipcMain.handle('check-updates', async () => {
   try {
     return await checkForUpdates();
@@ -1587,6 +1795,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   for (const username of [...bots.keys()]) stopBot(username);
   if (playerTimer) clearInterval(playerTimer);
+  stopDiscordActivity();
 });
 
 app.on('window-all-closed', () => {
